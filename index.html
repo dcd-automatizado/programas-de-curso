@@ -194,6 +194,24 @@ body::after{content:'';position:fixed;inset:0;background-image:url("data:image/s
 .ficha-apply-btn:hover{background:var(--emerald);color:#fff;}
 .ficha-actions{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;}
 #ficha-file-input{display:none;}
+
+/* ── Prompt editor modal ── */
+#modal-prompts .modal{max-width:780px;width:95%;}
+.pe-list{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;margin-bottom:20px;border:1.5px solid var(--border);border-radius:var(--rs);}
+.pe-item{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--cream2);transition:background 0.14s;}
+.pe-item:last-child{border-bottom:none;}
+.pe-item:hover{background:var(--cream);}
+.pe-item.active{background:var(--emerald3);}
+.pe-item-icon{font-size:15px;flex-shrink:0;}
+.pe-item-name{font-size:13px;font-weight:500;}
+.pe-item-mod{font-size:10px;color:var(--emerald);margin-left:auto;background:var(--emerald3);padding:2px 7px;border-radius:10px;display:none;}
+.pe-item.custom .pe-item-mod{display:block;}
+.pe-editor{display:flex;flex-direction:column;gap:8px;}
+.pe-editor label{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--ink3);}
+.pe-editor textarea{width:100%;min-height:200px;background:var(--cream);border:1.5px solid var(--border);border-radius:var(--rs);padding:12px 14px;font-family:var(--mono);font-size:12px;color:var(--ink2);line-height:1.6;resize:vertical;outline:none;}
+.pe-editor textarea:focus{border-color:var(--emerald);}
+.pe-hint{font-size:11px;color:var(--ink4);line-height:1.6;}
+.pe-hint code{font-family:var(--mono);background:var(--cream2);padding:1px 5px;border-radius:3px;}
 .ficha-loading{display:none;align-items:center;gap:8px;font-size:13px;color:var(--ink3);}
 .ficha-loading.active{display:flex;}
 .prog-fill{height:100%;background:linear-gradient(90deg,var(--emerald),var(--emerald2));border-radius:3px;transition:width 0.5s ease;}
@@ -296,8 +314,9 @@ body::after{content:'';position:fixed;inset:0;background-image:url("data:image/s
       <div class="brand-mark">D</div>
       <div class="brand-name">Asistente Curricular<span>DCD · CENFOTEC</span></div>
     </div>
-    <div class="nav-auth" id="nav-auth">
-      <!-- Populated by JS -->
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="btn btn-ghost btn-sm" onclick="openPromptEditor()" style="font-size:12px" title="Editar prompts">✏️ Prompts</button>
+      <div class="nav-auth" id="nav-auth"><!-- Populated by JS --></div>
     </div>
   </nav>
 
@@ -462,8 +481,9 @@ body::after{content:'';position:fixed;inset:0;background-image:url("data:image/s
   <div class="modal">
     <div class="modal-ico">📂</div>
     <h2>Nuevo proyecto</h2>
-    <p>Nombre del programa y URL de su Google Sheets.</p>
+    <p>Datos del programa y enlace de su Google Sheets.</p>
     <div class="fg"><label>Nombre del programa</label><input type="text" id="in-name" placeholder="Ej: BAE I, BIROB, Maestría Cloud…"></div>
+    <div class="fg"><label>Nombre de la carrera</label><input type="text" id="in-career" placeholder="Ej: Bachillerato en Administración de Empresas"></div>
     <div class="fg">
       <label>URL de Google Sheets</label>
       <input type="text" id="in-url" placeholder="https://docs.google.com/spreadsheets/d/…">
@@ -479,6 +499,34 @@ body::after{content:'';position:fixed;inset:0;background-image:url("data:image/s
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- Modal: Prompt editor -->
+<div class="overlay" id="modal-prompts">
+  <div class="modal">
+    <div class="modal-ico">✏️</div>
+    <h2>Editor de prompts</h2>
+    <p>Personaliza cualquier prompt. Los cambios aplican a todos los proyectos y se guardan en Drive.</p>
+    <div style="display:grid;grid-template-columns:220px 1fr;gap:18px">
+      <div>
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--ink4);margin-bottom:8px">Secciones</div>
+        <div class="pe-list" id="pe-list"></div>
+        <button class="btn btn-ghost btn-sm" onclick="resetCurrentPrompt()" style="width:100%;margin-top:6px;font-size:11px">↺ Restaurar original</button>
+      </div>
+      <div class="pe-editor">
+        <label id="pe-label">Selecciona una sección</label>
+        <textarea id="pe-textarea" placeholder="Selecciona una sección de la lista para editar su prompt…"></textarea>
+        <div class="pe-hint">
+          Usa <code>[NOMBRE DEL CURSO]</code> para variables que se reemplazan automáticamente.<br>
+          El prompt original se restaura si borras todo el texto.
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn btn-ghost" onclick="closePromptEditor()">Cerrar</button>
+      <button class="btn btn-primary" onclick="saveCurrentPrompt()">✓ Guardar prompt</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ══════════════════════════════════════════════════════
    GOOGLE OAUTH CONFIG
@@ -492,7 +540,7 @@ body::after{content:'';position:fixed;inset:0;background-image:url("data:image/s
    5. Reemplazar el CLIENT_ID de abajo con el tuyo.
 ══════════════════════════════════════════════════════ */
 const GOOGLE_CLIENT_ID = '204310820162-phq4d7grasopg952prts474vdl9vepfl.apps.googleusercontent.com';
-const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
+const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
 
 /* ══════════════════════════════════════════════════════
    STATE
@@ -505,11 +553,13 @@ let allCourses = [];
 let maestroData = {};
 let gAccessToken = null;
 let gUserInfo = null;
+let customPrompts = {};  // { promptKey: overrideText }
 
 try { projects = JSON.parse(localStorage.getItem('dcd_projects')||'[]'); } catch(e){}
 try { maestroData = JSON.parse(localStorage.getItem('dcd_maestro')||'{}'); } catch(e){}
 try { gAccessToken = localStorage.getItem('dcd_gtoken')||null; } catch(e){}
 try { gUserInfo = JSON.parse(localStorage.getItem('dcd_guser')||'null'); } catch(e){}
+try { customPrompts = JSON.parse(localStorage.getItem('dcd_prompts')||'{}'); } catch(e){}
 
 /* ══════════════════════════════════════════════════════
    GOOGLE IDENTITY SERVICES (OAuth)
@@ -548,7 +598,128 @@ function onTokenReceived(resp) {
     renderNavAuth();
     toast('✓ Conectado como '+info.name,'success');
     updateSheetsStatusAll();
+    // Load Drive backup then refresh home
+    loadFromDrive().then(loaded => {
+      if (loaded) { renderProjects(); }
+    });
   });
+}
+
+/* ══════════════════════════════════════════════════════
+   GOOGLE DRIVE BACKUP
+   Uses drive.file scope — only accesses files THIS app
+   created. Stores one file: "dcd_backup.json" in Drive root.
+══════════════════════════════════════════════════════ */
+const DRIVE_BACKUP_NAME = 'dcd_backup.json';
+let driveBackupFileId = null;
+
+async function driveReq(path, method='GET', body=null, isUpload=false) {
+  if (!gAccessToken) return null;
+  const base = isUpload
+    ? 'https://www.googleapis.com/upload/drive/v3'
+    : 'https://www.googleapis.com/drive/v3';
+  const headers = { Authorization: 'Bearer '+gAccessToken };
+  if (!isUpload && body) headers['Content-Type'] = 'application/json';
+  const opts = { method, headers };
+  if (body) opts.body = isUpload ? body : JSON.stringify(body);
+  const r = await fetch(base+path, opts);
+  if (!r.ok) return null;
+  return r.json();
+}
+
+async function findBackupFile() {
+  const res = await driveReq(`/files?q=name='${DRIVE_BACKUP_NAME}' and trashed=false&fields=files(id,name,modifiedTime)`);
+  return res?.files?.[0] || null;
+}
+
+async function loadFromDrive() {
+  if (!gAccessToken) return false;
+  try {
+    const file = await findBackupFile();
+    if (!file) return false;
+    driveBackupFileId = file.id;
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
+      headers: { Authorization: 'Bearer '+gAccessToken }
+    });
+    if (!r.ok) return false;
+    const backup = await r.json();
+    // Merge into local state — Drive wins for projects/prompts; merge maestroData
+    if (backup.projects?.length) {
+      projects = backup.projects;
+      localStorage.setItem('dcd_projects', JSON.stringify(projects));
+    }
+    if (backup.customPrompts && Object.keys(backup.customPrompts).length) {
+      customPrompts = backup.customPrompts;
+      localStorage.setItem('dcd_prompts', JSON.stringify(customPrompts));
+    }
+    if (backup.maestroData) {
+      // Deep merge — don't overwrite local data with empty Drive data
+      Object.entries(backup.maestroData).forEach(([sid, courses]) => {
+        if (!maestroData[sid]) maestroData[sid] = {};
+        Object.entries(courses).forEach(([code, secs]) => {
+          if (!maestroData[sid][code]) maestroData[sid][code] = {};
+          Object.entries(secs).forEach(([secId, val]) => {
+            if (val && !maestroData[sid][code][secId]) maestroData[sid][code][secId] = val;
+          });
+        });
+      });
+      localStorage.setItem('dcd_maestro', JSON.stringify(maestroData));
+    }
+    toast(`✓ Datos restaurados desde Drive (${new Date(file.modifiedTime).toLocaleDateString('es-CR')})`, 'success');
+    return true;
+  } catch(e) { return false; }
+}
+
+async function saveToDrive() {
+  if (!gAccessToken) return;
+  const backup = {
+    version: 2,
+    savedAt: new Date().toISOString(),
+    projects,
+    customPrompts,
+    maestroData
+  };
+  const json = JSON.stringify(backup);
+  const blob = new Blob([json], { type: 'application/json' });
+
+  try {
+    if (!driveBackupFileId) {
+      // Check if file exists from a previous session
+      const existing = await findBackupFile();
+      driveBackupFileId = existing?.id || null;
+    }
+
+    if (driveBackupFileId) {
+      // Update existing file
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveBackupFileId}?uploadType=media`, {
+        method: 'PATCH',
+        headers: { Authorization: 'Bearer '+gAccessToken, 'Content-Type': 'application/json' },
+        body: blob
+      });
+    } else {
+      // Create new file
+      const meta = { name: DRIVE_BACKUP_NAME, mimeType: 'application/json' };
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(meta)], {type:'application/json'}));
+      form.append('file', blob);
+      const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer '+gAccessToken },
+        body: form
+      });
+      const created = await r.json();
+      driveBackupFileId = created.id;
+    }
+    // Show subtle indicator
+    const lbl = document.getElementById('save-lbl');
+    if (lbl) { lbl.textContent = '☁ Respaldo en Drive'; lbl.classList.add('show'); setTimeout(()=>lbl.classList.remove('show'),2000); }
+  } catch(e) { console.warn('Drive backup failed:', e); }
+}
+
+// Auto-backup every time local data changes
+function autoBackup() {
+  clearTimeout(autoBackup._t);
+  autoBackup._t = setTimeout(saveToDrive, 2000); // debounce 2s
 }
 
 function googleSignOut() {
@@ -968,6 +1139,13 @@ const CRONOGRAMA_COLS = ['Sesion_1','Cronograma_Modulo_1','Cronograma_Subtema_1'
    PROMPTS
 ══════════════════════════════════════════════════════ */
 function buildPrompt(pkey, course, saved, secId) {
+  // Use custom prompt if set, interpolating course name
+  if (customPrompts[pkey]) {
+    const name = course['Curso']||course['Nombre']||'';
+    return customPrompts[pkey]
+      .replace(/\[NOMBRE DEL CURSO\]/g, name)
+      .replace(/\[CARRERA\]/g, currentProject?.career||'');
+  }
   const c = course;
   const s = saved;
   const name = c['Curso']||c['Nombre']||'';
@@ -1278,7 +1456,7 @@ function renderProjects(){
   projects.forEach(p=>{
     const card=document.createElement('div');
     card.className='project-card';
-    card.innerHTML=`<div class="pc-stripe"></div><div class="pc-icon">📂</div><h3>${p.name}</h3><div class="pc-url">${p.url}</div><div class="pc-foot"><span class="pc-date">${new Date(p.created).toLocaleDateString('es-CR')}</span><button class="del-btn" onclick="event.stopPropagation();delProject('${p.id}')" title="Eliminar">✕</button></div>`;
+    card.innerHTML=`<div class="pc-stripe"></div><div class="pc-icon">📂</div><h3>${p.name}</h3>${p.career?`<div style="font-size:12px;color:var(--ink3);margin-bottom:4px">${p.career}</div>`:''}<div class="pc-url">${p.url}</div><div class="pc-foot"><span class="pc-date">${new Date(p.created).toLocaleDateString('es-CR')}</span><button class="del-btn" onclick="event.stopPropagation();delProject('${p.id}')" title="Eliminar">✕</button></div>`;
     card.addEventListener('click',()=>showProject(p.id));
     grid.appendChild(card);
   });
@@ -1289,15 +1467,18 @@ function renderProjects(){
   grid.appendChild(add);
 }
 function createProject(){
-  const name=document.getElementById('in-name').value.trim();
-  const url=document.getElementById('in-url').value.trim();
-  if(!name||!url){toast('Completa ambos campos','error');return;}
+  const name   = document.getElementById('in-name').value.trim();
+  const career = document.getElementById('in-career').value.trim();
+  const url    = document.getElementById('in-url').value.trim();
+  if(!name||!url){toast('Completa nombre y URL','error');return;}
   if(!extractSheetId(url)){toast('URL inválida de Google Sheets','error');return;}
   const id=Date.now().toString();
-  projects.push({id,name,url,sheetId:extractSheetId(url),created:Date.now()});
+  projects.push({id,name,career,url,sheetId:extractSheetId(url),created:Date.now()});
   localStorage.setItem('dcd_projects',JSON.stringify(projects));
+  autoBackup();
   closeModal();
   document.getElementById('in-name').value='';
+  document.getElementById('in-career').value='';
   document.getElementById('in-url').value='';
   renderProjects();
   toast(`✓ Proyecto "${name}" creado`,'success');
@@ -1476,6 +1657,7 @@ function saveSection(){
   if(!maestroData[sid][code])maestroData[sid][code]={};
   maestroData[sid][code][currentSection.id]=val;
   localStorage.setItem('dcd_maestro',JSON.stringify(maestroData));
+  autoBackup();
   renderSecGrid();
   updateProgress();
   const lbl=document.getElementById('save-lbl');
@@ -1820,7 +2002,7 @@ function buildSchedule(){
           if(a&&v&&n&&!n.value){
             n.value=a==='__study__'
               ?`Durante las horas de estudio independiente, el estudiante realiza las actividades según las indicaciones del docente.`
-              :`${a}: El estudiante ${v.toLowerCase()} el desarrollo de ${a.toLowerCase()} y consulta al docente ante cualquier duda. Durante las horas de estudio independiente, el estudiante realiza las actividades según las indicaciones del docente.`;
+              :`${a}: El estudiante ${v.toLowerCase()} el desarrollo de ${a.toLowerCase()} y consulta al docente ante cualquier duda.\nDurante las horas de estudio independiente, el estudiante realiza las actividades según las indicaciones del docente.`;
           }
         };
         document.getElementById(`sa${s}`)?.addEventListener('change',auto);
@@ -1850,6 +2032,7 @@ function saveSchedule(){
   if(!maestroData[sid][code])maestroData[sid][code]={};
   maestroData[sid][code].cronograma=JSON.stringify(data);
   localStorage.setItem('dcd_maestro',JSON.stringify(maestroData));
+  autoBackup();
   renderSecGrid();updateProgress();
   toast('✓ Cronograma guardado','success');
 }
@@ -1878,7 +2061,8 @@ function toast(msg,type=''){
    INIT
 ══════════════════════════════════════════════════════ */
 document.getElementById('modal-add').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+document.getElementById('modal-prompts').addEventListener('click',e=>{if(e.target===e.currentTarget)closePromptEditor();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closePromptEditor();}});
 
 renderProjects();
 initGoogleAuth();
@@ -2235,6 +2419,106 @@ function applyAllFicha() {
 function closeFicha() {
   document.getElementById('ficha-result').classList.remove('visible');
   fichaExtracted = {};
+}
+
+/* ══════════════════════════════════════════════════════
+   PROMPT EDITOR
+══════════════════════════════════════════════════════ */
+// Prompt metadata — label + key mapping
+const PROMPT_META = [
+  {key:'objeto_estudio',   label:'Objeto de estudio',          icon:'📖'},
+  {key:'importancia',      label:'Importancia',                icon:'⭐'},
+  {key:'en_curso',         label:'En el curso…',               icon:'🎯'},
+  {key:'rasgos',           label:'Rasgos de perfil',           icon:'👤'},
+  {key:'competencia',      label:'Competencia del curso',      icon:'🏆'},
+  {key:'ra',               label:'Resultado de Aprendizaje',   icon:'1️⃣'},
+  {key:'cd',               label:'Criterios de Desempeño',     icon:'📋'},
+  {key:'ev',               label:'Evidencia',                  icon:'📎'},
+  {key:'modulos',          label:'Módulos y Subtemas',         icon:'📚'},
+  {key:'metodologias',     label:'Metodologías',               icon:'🧠'},
+  {key:'estrategias',      label:'Estrategias de Aprendizaje', icon:'🎲'},
+  {key:'eva_tabla',        label:'Tabla de Evaluaciones',      icon:'📊'},
+  {key:'eva_tipo',         label:'Tipos de Evaluación',        icon:'🔍'},
+  {key:'eva_desc',         label:'Descripción de Evaluación',  icon:'📝'},
+  {key:'recursos',         label:'Recursos Didácticos',        icon:'🛠️'},
+  {key:'biblio',           label:'Bibliografía',               icon:'📕'},
+];
+
+let peCurrentKey = null;
+
+function openPromptEditor() {
+  const list = document.getElementById('pe-list');
+  list.innerHTML = '';
+  PROMPT_META.forEach(pm => {
+    const div = document.createElement('div');
+    const isCustom = !!customPrompts[pm.key];
+    div.className = 'pe-item' + (isCustom ? ' custom' : '');
+    div.innerHTML = `<span class="pe-item-icon">${pm.icon}</span><span class="pe-item-name">${pm.label}</span><span class="pe-item-mod">editado</span>`;
+    div.onclick = () => selectPromptKey(pm, div);
+    list.appendChild(div);
+  });
+  document.getElementById('modal-prompts').classList.add('active');
+}
+
+function closePromptEditor() {
+  document.getElementById('modal-prompts').classList.remove('active');
+  peCurrentKey = null;
+}
+
+function selectPromptKey(pm, el) {
+  document.querySelectorAll('.pe-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  peCurrentKey = pm.key;
+  document.getElementById('pe-label').textContent = `${pm.icon} ${pm.label}`;
+
+  // Get current effective prompt — custom or generate default with placeholder course
+  const fakeCourse = { Curso: '[NOMBRE DEL CURSO]', Nombre: '[NOMBRE DEL CURSO]', Créditos:'3', Lectivas:'3', Teoria:'1', Lab:'1', Practica:'1' };
+  const fakeSaved = {
+    descripcion_objeto:'[Objeto de estudio]',
+    competencia:'[Competencia]',
+    ra1:'[RA1]', ra2:'[RA2]', ra3:'[RA3]',
+    e1:'[Evidencia 1]', e2:'[Evidencia 2]', e3:'[Evidencia 3]',
+    modulos:'[Módulos]'
+  };
+
+  let defaultText = '';
+  try { defaultText = buildPrompt(pm.key, fakeCourse, fakeSaved, pm.key+'1'); } catch(e) {}
+
+  const ta = document.getElementById('pe-textarea');
+  ta.value = customPrompts[pm.key] || defaultText;
+}
+
+function saveCurrentPrompt() {
+  if (!peCurrentKey) { toast('Selecciona una sección primero','error'); return; }
+  const val = document.getElementById('pe-textarea').value.trim();
+  if (val) {
+    customPrompts[peCurrentKey] = val;
+  } else {
+    delete customPrompts[peCurrentKey]; // blank = restore default
+  }
+  localStorage.setItem('dcd_prompts', JSON.stringify(customPrompts));
+  autoBackup();
+  // Refresh list UI
+  document.querySelectorAll('.pe-item').forEach((el, i) => {
+    const pm = PROMPT_META[i];
+    if (pm) {
+      const isCustom = !!customPrompts[pm.key];
+      el.classList.toggle('custom', isCustom);
+    }
+  });
+  toast('✓ Prompt guardado para todas las secciones de este tipo','success');
+}
+
+function resetCurrentPrompt() {
+  if (!peCurrentKey) return;
+  delete customPrompts[peCurrentKey];
+  localStorage.setItem('dcd_prompts', JSON.stringify(customPrompts));
+  autoBackup();
+  // Re-select to refresh textarea
+  const activeEl = document.querySelector('.pe-item.active');
+  const pm = PROMPT_META.find(p => p.key === peCurrentKey);
+  if (pm && activeEl) { activeEl.classList.remove('custom'); selectPromptKey(pm, activeEl); }
+  toast('✓ Prompt restaurado al original','success');
 }
 </script>
 </body>
