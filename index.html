@@ -333,7 +333,7 @@ body::after{content:'';position:fixed;inset:0;background-image:url("data:image/s
 
   <div class="proj-body">
     <div class="config-hint" id="config-hint">
-      <strong>📋 Configuración requerida:</strong> El Sheet debe ser público o compartido con "Cualquier persona con el enlace puede ver". En Google Sheets: <strong>Archivo → Compartir → Publicar en la web → hoja Base → CSV</strong>. El nombre exacto debe ser <code>Base</code>.
+      <strong>⚠️ Acceso restringido:</strong> No se pudo leer el Sheet. Asegúrate de haber iniciado sesión con Google (botón arriba a la derecha) y de que tu cuenta tiene acceso al archivo. El nombre de la hoja debe ser exactamente <code>Base</code>.
     </div>
     <div class="sec-hd"><div><h2>Cursos del programa</h2><p id="course-count" style="font-size:13px;color:var(--ink3);">Cargando…</p></div></div>
     <div class="period-tabs" id="period-tabs"></div>
@@ -559,105 +559,290 @@ function updateSheetsStatusAll() {
 }
 
 /* ══════════════════════════════════════════════════════
-   GOOGLE SHEETS API — READ & WRITE
+   GOOGLE SHEETS API — AUTHENTICATED READ & WRITE
+   Works with any Sheet where the user is owner/editor.
+   No public sharing required.
 ══════════════════════════════════════════════════════ */
+
+// Full Maestro header row (exact column order)
+const MAESTRO_HEADERS = [
+  'Código','Nombre','Créditos','Lectivas','Teoria','Lab','Practica','Independiente','Total','Ubicación','Requisitos',
+  'Descripción','Competencia','RA1','CD1','E1','RA2','CD2','E2','RA3','CD3','E3',
+  'Modulo1','Subtemas 1','Modulo2','Subtemas 2','Modulo3','Subtemas 3','Modulo4','Subtemas 4',
+  'Modulo5','Subtemas 5','Modulo6','Subtemas 6','Modulo7','Subtemas 7',
+  'Metodologías','Estrategias de Aprendizaje','Tipo_Evaluacion_EN',
+  'Eva_Tabla1','Cantidad_Eva_1','Porcen_Tabla1','Eva_Tabla2','Cantidad_Eva_2','Porcen_Tabla2',
+  'Eva_Tabla3','Cantidad_Eva_3','Porcen_Tabla3',
+  'Eva_Distri_1','Eva_Descrip_1','Eva_Rubric_1','Eva_Distri_2','Eva_Descrip_2','Eva_Rubric_2',
+  'Eva_Distri_3','Eva_Descrip_3','Eva_Rubric_3',
+  'Recursos','Bibliografia_Obligatoria','Bibliografia_Complementaria',
+  'Sesion_1','Cronograma_Modulo_1','Cronograma_Subtema_1',
+  'Sesion_2','Cronograma_Modulo_2','Cronograma_Subtema_2','Actividades_EN_2',
+  'Sesion_3','Cronograma_Modulo_3','Cronograma_Subtema_3','Actividades_EN_3',
+  'Sesion_4','Cronograma_Modulo_4','Cronograma_Subtema_4','Actividades_EN_4',
+  'Sesion_5','Cronograma_Modulo_5','Cronograma_Subtema_5','Actividades_EN_5',
+  'Sesion_6','Cronograma_Modulo_6','Cronograma_Subtema_6','Actividades_EN_6',
+  'Sesion_7','Cronograma_Modulo_7','Cronograma_Subtema_7','Actividades_EN_7',
+  'Sesion_8','Cronograma_Modulo_8','Cronograma_Subtema_8','Actividades_EN_8',
+  'Sesion_9','Cronograma_Modulo_9','Cronograma_Subtema_9','Actividades_EN_9',
+  'Sesion_10','Cronograma_Modulo_10','Cronograma_Subtema_10','Actividades_EN_10',
+  'Sesion_11','Cronograma_Modulo_11','Cronograma_Subtema_11','Actividades_EN_11',
+  'Sesion_12','Cronograma_Modulo_12','Cronograma_Subtema_12','Actividades_EN_12',
+  'Sesion_13','Cronograma_Modulo_13','Cronograma_Subtema_13','Actividades_EN_13',
+  'Sesion_14','Cronograma_Modulo_14','Cronograma_Subtema_14','Actividades_EN_14',
+];
+
+// Section id → Maestro column name
+const SEC_TO_COL = {
+  descripcion_objeto:'Descripción', descripcion_import:'Descripción',
+  descripcion_en_curso:'Descripción', descripcion_rasgos:'Descripción',
+  competencia:'Competencia',
+  ra1:'RA1', cd1:'CD1', e1:'E1',
+  ra2:'RA2', cd2:'CD2', e2:'E2',
+  ra3:'RA3', cd3:'CD3', e3:'E3',
+  modulos:'Modulo1', metodologias:'Metodologías',
+  estrategias:'Estrategias de Aprendizaje',
+  eva_tabla:'Tipo_Evaluacion_EN', eva_tipo:'Tipo_Evaluacion_EN',
+  eva_desc1:'Eva_Descrip_1', eva_desc2:'Eva_Descrip_2', eva_desc3:'Eva_Descrip_3',
+  recursos:'Recursos',
+  biblio_ob:'Bibliografia_Obligatoria', biblio_co:'Bibliografia_Complementaria',
+};
+
+// ── Utilities ────────────────────────────────────────
 function extractSheetId(url) {
   const m = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
   return m ? m[1] : null;
 }
 
-async function fetchBase(url) {
-  const id = extractSheetId(url);
-  if (!id) throw new Error('URL inválida de Google Sheets.');
-  const r = await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=Base`);
-  if (!r.ok) throw new Error(`No se pudo acceder (${r.status}). Verifica que el Sheet sea público.`);
-  return parseCSV(await r.text());
-}
-
-// Get all values from Maestro sheet to find header row and course rows
-async function getMaestroMeta(sheetId) {
-  if (!gAccessToken) throw new Error('No autenticado con Google.');
-  const r = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Maestro!1:200`,
-    { headers: { Authorization: 'Bearer '+gAccessToken } }
-  );
-  if (!r.ok) {
-    const err = await r.json();
-    if (r.status===401) { gAccessToken=null; localStorage.removeItem('dcd_gtoken'); renderNavAuth(); throw new Error('Sesión expirada. Vuelve a iniciar sesión con Google.'); }
-    throw new Error(err.error?.message||'Error leyendo Maestro.');
-  }
-  const data = await r.json();
-  return data.values||[];
-}
-
-// Write a single row to Maestro — finds the row by Código column
-async function writeCourseToMaestro(sheetId, courseCode, colMap) {
-  // colMap: { columnLetter: value, ... }
-  // We first read to find the row number
-  const rows = await getMaestroMeta(sheetId);
-  if (!rows.length) throw new Error('Hoja Maestro vacía o inaccessible.');
-
-  const headers = rows[0]; // row 1 = headers
-  // Find code column index (column "Código" or index 0)
-  const codeIdx = headers.indexOf('Código') !== -1 ? headers.indexOf('Código') : 0;
-
-  let targetRow = -1;
-  for (let i=1; i<rows.length; i++) {
-    if ((rows[i][codeIdx]||'').trim() === courseCode) { targetRow = i+1; break; } // 1-based
-  }
-  if (targetRow === -1) throw new Error(`No se encontró el curso "${courseCode}" en la hoja Maestro.`);
-
-  // Build batchUpdate requests
-  const requests = [];
-  for (const [col, value] of Object.entries(colMap)) {
-    if (!col || value===undefined || value===null) continue;
-    const colIdx = headers.indexOf(col);
-    if (colIdx === -1) continue; // column not found
-    const colLetter = colIdxToLetter(colIdx);
-    const range = `Maestro!${colLetter}${targetRow}`;
-    requests.push({ range, values:[[value]] });
-  }
-
-  if (!requests.length) throw new Error('No hay columnas reconocidas para actualizar.');
-
-  const r = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values:batchUpdate`,
-    {
-      method: 'POST',
-      headers: { Authorization: 'Bearer '+gAccessToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ valueInputOption: 'RAW', data: requests })
-    }
-  );
-  if (!r.ok) {
-    const err = await r.json();
-    if (r.status===401) { gAccessToken=null; localStorage.removeItem('dcd_gtoken'); renderNavAuth(); throw new Error('Sesión expirada. Vuelve a iniciar sesión.'); }
-    throw new Error(err.error?.message||'Error escribiendo en Maestro.');
-  }
-  return await r.json();
-}
-
 function colIdxToLetter(idx) {
   let letter = '';
-  idx++; // 1-based
+  idx++;
   while (idx > 0) {
-    const rem = (idx-1) % 26;
-    letter = String.fromCharCode(65+rem) + letter;
-    idx = Math.floor((idx-1)/26);
+    const rem = (idx - 1) % 26;
+    letter = String.fromCharCode(65 + rem) + letter;
+    idx = Math.floor((idx - 1) / 26);
   }
   return letter;
 }
 
-// CSV parser
+// Central authenticated request helper
+async function sheetsReq(path, method = 'GET', body = null) {
+  if (!gAccessToken) throw new Error('Inicia sesión con Google primero.');
+  const opts = {
+    method,
+    headers: { Authorization: 'Bearer ' + gAccessToken, 'Content-Type': 'application/json' }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch('https://sheets.googleapis.com/v4/spreadsheets' + path, opts);
+  if (r.status === 401) {
+    gAccessToken = null;
+    localStorage.removeItem('dcd_gtoken');
+    renderNavAuth(); updateSheetsStatusAll();
+    throw new Error('Tu sesión de Google expiró. Vuelve a iniciar sesión.');
+  }
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error(e.error?.message || `Error Sheets API (${r.status})`);
+  }
+  return r.json();
+}
+
+// ── READ Base — authenticated (works on private sheets) ─
+async function fetchBase(url) {
+  const id = extractSheetId(url);
+  if (!id) throw new Error('URL inválida de Google Sheets.');
+  if (gAccessToken) {
+    const data = await sheetsReq(`/${id}/values/Base`);
+    return sheetsValuesToObjects(data.values || []);
+  }
+  // Not signed in → try public CSV fallback
+  const r = await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=Base`);
+  if (!r.ok) throw new Error(`No se pudo acceder. Inicia sesión con Google para usar Sheets privados.`);
+  return parseCSV(await r.text());
+}
+
+function sheetsValuesToObjects(values) {
+  if (values.length < 2) return [];
+  const headers = values[0];
+  return values.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (row[i] || '').trim(); });
+    return obj;
+  }).filter(r => r['Curso'] || r['Nombre']);
+}
+
+// ── GET sheet names ──────────────────────────────────
+async function getSheetNames(sheetId) {
+  const data = await sheetsReq(`/${sheetId}?fields=sheets.properties.title`);
+  return (data.sheets || []).map(s => s.properties.title);
+}
+
+// ── ENSURE Maestro sheet exists (create if not) ───────
+async function ensureMaestroSheet(sheetId) {
+  const names = await getSheetNames(sheetId);
+  if (names.includes('Maestro')) return;
+  // Create sheet tab
+  await sheetsReq(`/${sheetId}:batchUpdate`, 'POST', {
+    requests: [{ addSheet: { properties: { title: 'Maestro' } } }]
+  });
+  // Write header row
+  await sheetsReq(`/${sheetId}/values/Maestro!A1?valueInputOption=RAW`, 'PUT', {
+    values: [MAESTRO_HEADERS]
+  });
+  toast('✓ Hoja "Maestro" creada con todos los encabezados', 'success');
+}
+
+// ── READ Maestro → { headers, rows, codeIdx } ─────────
+async function readMaestro(sheetId) {
+  await ensureMaestroSheet(sheetId);
+  const data = await sheetsReq(`/${sheetId}/values/Maestro`);
+  const values = data.values || [];
+  if (!values.length) {
+    // Empty after creation edge case — write headers
+    await sheetsReq(`/${sheetId}/values/Maestro!A1?valueInputOption=RAW`, 'PUT', {
+      values: [MAESTRO_HEADERS]
+    });
+    return { headers: MAESTRO_HEADERS, rows: [], codeIdx: 0 };
+  }
+  const headers = values[0];
+  const rows = values.slice(1);
+  const codeIdx = Math.max(headers.indexOf('Código'), 0);
+  return { headers, rows, codeIdx };
+}
+
+// ── ADD course row to Maestro if missing ──────────────
+async function ensureCourseRow(sheetId, course, maestro) {
+  const { headers, rows, codeIdx } = maestro;
+  const code = (course['Código'] || '').trim();
+  if (!code) return;
+  if (rows.some(r => (r[codeIdx] || '').trim() === code)) return; // already there
+
+  // Build row from Base sheet data
+  const newRow = new Array(headers.length).fill('');
+  const baseMap = {
+    'Código':       course['Código'] || '',
+    'Nombre':       course['Curso'] || course['Nombre'] || '',
+    'Créditos':     course['Créditos'] || '',
+    'Lectivas':     course['Horas Docencia'] || course['Lectivas'] || '',
+    'Teoria':       course['Horas teoría'] || course['Teoria'] || '',
+    'Lab':          course['Horas laboratorio'] || course['Lab'] || '',
+    'Practica':     course['Horas práctica'] || course['Practica'] || '',
+    'Independiente':course['Horas Independiente'] || course['Independiente'] || '',
+    'Total':        course['Total de horas'] || course['Total'] || '',
+    'Ubicación':    course['Periodo'] || course['Ubicación'] || '',
+    'Requisitos':   course['Requisitos'] || '',
+  };
+  Object.entries(baseMap).forEach(([col, val]) => {
+    const idx = headers.indexOf(col);
+    if (idx !== -1) newRow[idx] = val;
+  });
+
+  await sheetsReq(`/${sheetId}/values/Maestro:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, 'POST', {
+    values: [newRow]
+  });
+  toast(`✓ Fila para "${code}" añadida en Maestro`, 'success');
+}
+
+// ── IMPORT existing Maestro data → local store ─────────
+async function importFromMaestro(sheetId) {
+  const { headers, rows, codeIdx } = await readMaestro(sheetId);
+  if (!rows.length) return 0;
+
+  // Build reverse map: column name → [secId, ...]
+  const colToSecs = {};
+  Object.entries(SEC_TO_COL).forEach(([secId, col]) => {
+    if (!colToSecs[col]) colToSecs[col] = [];
+    if (!colToSecs[col].includes(secId)) colToSecs[col].push(secId);
+  });
+
+  if (!maestroData[sheetId]) maestroData[sheetId] = {};
+  let imported = 0;
+
+  rows.forEach(row => {
+    const code = (row[codeIdx] || '').trim();
+    if (!code) return;
+    if (!maestroData[sheetId][code]) maestroData[sheetId][code] = {};
+    const local = maestroData[sheetId][code];
+
+    headers.forEach((col, i) => {
+      const val = (row[i] || '').trim();
+      if (!val) return;
+      const secs = colToSecs[col];
+      if (!secs) return;
+      secs.forEach(secId => {
+        if (!local[secId]) { local[secId] = val; imported++; }
+      });
+    });
+
+    // Rebuild cronograma from individual session columns
+    if (!local.cronograma) {
+      const schData = {};
+      let hasAny = false;
+      for (let s = 1; s <= 14; s++) {
+        const mod  = (row[headers.indexOf(`Cronograma_Modulo_${s}`)]  || '').trim();
+        const sub  = (row[headers.indexOf(`Cronograma_Subtema_${s}`)] || '').trim();
+        const note = s >= 2 ? (row[headers.indexOf(`Actividades_EN_${s}`)] || '').trim() : '';
+        if (mod || sub || note) { schData[s] = { mod, sub, note }; hasAny = true; }
+      }
+      if (hasAny) { local.cronograma = JSON.stringify(schData); imported++; }
+    }
+  });
+
+  localStorage.setItem('dcd_maestro', JSON.stringify(maestroData));
+  return imported;
+}
+
+// ── WRITE course data to Maestro ──────────────────────
+async function writeCourseToMaestro(sheetId, courseCode, colMap) {
+  let maestro = await readMaestro(sheetId);
+
+  // Find target row number (1-based; row 1 = headers)
+  let targetRow = -1;
+  for (let i = 0; i < maestro.rows.length; i++) {
+    if ((maestro.rows[i][maestro.codeIdx] || '').trim() === courseCode) {
+      targetRow = i + 2; break;
+    }
+  }
+
+  // Row doesn't exist yet — create it
+  if (targetRow === -1) {
+    await ensureCourseRow(sheetId, currentCourse, maestro);
+    maestro = await readMaestro(sheetId); // re-read after append
+    for (let i = 0; i < maestro.rows.length; i++) {
+      if ((maestro.rows[i][maestro.codeIdx] || '').trim() === courseCode) {
+        targetRow = i + 2; break;
+      }
+    }
+    if (targetRow === -1) throw new Error('No se pudo localizar la fila después de crearla.');
+  }
+
+  // Build batchUpdate payload
+  const data = [];
+  for (const [col, value] of Object.entries(colMap)) {
+    if (!col || value == null || value === '') continue;
+    const colIdx = maestro.headers.indexOf(col);
+    if (colIdx === -1) continue;
+    data.push({ range: `Maestro!${colIdxToLetter(colIdx)}${targetRow}`, values: [[value]] });
+  }
+  if (!data.length) throw new Error('No hay columnas reconocidas para actualizar.');
+
+  await sheetsReq(`/${sheetId}/values:batchUpdate`, 'POST', {
+    valueInputOption: 'RAW',
+    data
+  });
+}
+
+// ── CSV parser (fallback, public sheets only) ─────────
 function parseCSV(text) {
-  const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
-  if (lines.length<2) return [];
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length < 2) return [];
   const headers = parseCSVLine(lines[0]);
-  return lines.slice(1).map(line=>{
+  return lines.slice(1).map(line => {
     const vals = parseCSVLine(line);
     const obj = {};
-    headers.forEach((h,i)=>{ obj[h.replace(/^"|"$/g,'').trim()]=(vals[i]||'').replace(/^"|"$/g,'').trim(); });
+    headers.forEach((h, i) => { obj[h.replace(/^"|"$/g, '').trim()] = (vals[i] || '').replace(/^"|"$/g, '').trim(); });
     return obj;
-  }).filter(r=>r['Curso']||r['Nombre']);
+  }).filter(r => r['Curso'] || r['Nombre']);
 }
 function parseCSVLine(line) {
   const res=[]; let cur='',inQ=false;
@@ -1097,6 +1282,16 @@ async function loadCourses(){
     allCourses=await fetchBase(currentProject.url);
     if(!allCourses.length){cont.innerHTML=`<div class="err-card">No se encontraron cursos en la hoja "Base". Verifica el nombre.</div>`;return;}
     document.getElementById('course-count').textContent=`${allCourses.length} cursos encontrados`;
+
+    // If authenticated, import existing Maestro data into local store
+    if(gAccessToken){
+      try{
+        const sheetId=extractSheetId(currentProject.url);
+        const n=await importFromMaestro(sheetId);
+        if(n>0) toast(`✓ ${n} campos importados desde Maestro`,'success');
+      }catch(e){ /* Maestro may not exist yet, that's fine */ }
+    }
+
     const periods=[...new Set(allCourses.map(c=>c['Periodo']||c['Ubicación']||'?'))].sort();
     renderPeriodTabs(periods);
     renderTable(allCourses);
@@ -1144,10 +1339,11 @@ function renderTable(courses){
   cont.innerHTML='';cont.appendChild(wrap);
 }
 async function syncSheets(){
-  document.getElementById('sync-btn').textContent='Sincronizando…';
+  const btn=document.getElementById('sync-btn');
+  btn.textContent='Sincronizando…';
   await loadCourses();
-  document.getElementById('sync-btn').textContent='⟳ Sincronizar';
-  toast('✓ Actualizado','success');
+  btn.textContent='⟳ Sincronizar';
+  toast('✓ Base y Maestro actualizados','success');
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1266,46 +1462,54 @@ async function pushToMaestro(){
   const saved=maestroData[sid]?.[code]||{};
 
   if(!Object.keys(saved).length){toast('No hay datos guardados para este curso','error');return;}
-
-  if(!gAccessToken){
-    toast('Inicia sesión con Google primero para escribir en Sheets','error');
-    return;
-  }
+  if(!gAccessToken){toast('Inicia sesión con Google para escribir en Sheets','error');return;}
 
   const btn=document.getElementById('push-btn');
-  btn.textContent='Guardando…';btn.disabled=true;
-
-  // Build column map: Maestro column header → value
-  const colMap={};
-
-  // Regular sections
-  ALL_SECS.forEach(sec=>{
-    if(!sec.col||!saved[sec.id]) return;
-    colMap[sec.col]=saved[sec.id];
-  });
-
-  // Cronograma: parse stored JSON → individual columns
-  if(saved.cronograma){
-    try{
-      const sch=JSON.parse(saved.cronograma);
-      for(let s=1;s<=14;s++){
-        const d=sch[s]||{};
-        colMap[`Sesion_${s}`]=String(s);
-        if(d.mod) colMap[`Cronograma_Modulo_${s}`]=d.mod;
-        if(d.sub) colMap[`Cronograma_Subtema_${s}`]=d.sub;
-        if(s>=2&&d.note) colMap[`Actividades_EN_${s}`]=d.note;
-      }
-    }catch(e){}
-  }
+  btn.textContent='Guardando en Sheets…';btn.disabled=true;
 
   try{
     const sheetId=extractSheetId(currentProject.url);
-    await writeCourseToMaestro(sheetId,code,colMap);
-    toast(`✓ Curso "${code}" guardado en la hoja Maestro`,'success');
-  }catch(err){
-    toast('Error al guardar en Sheets: '+err.message,'error');
-  }
+    const colMap={};
 
+    // Map each saved section → Maestro column using SEC_TO_COL
+    Object.entries(saved).forEach(([secId,val])=>{
+      if(!val||secId==='cronograma') return;
+      const col=SEC_TO_COL[secId];
+      if(col && !colMap[col]) colMap[col]=val; // first wins for shared cols (Descripción)
+    });
+
+    // Descripción: assemble all 4 sub-parts into one cell if present
+    const descParts=[saved.descripcion_objeto,saved.descripcion_import,saved.descripcion_en_curso,saved.descripcion_rasgos].filter(Boolean);
+    if(descParts.length) colMap['Descripción']=descParts.join('
+
+');
+
+    // Cronograma → individual session columns
+    if(saved.cronograma){
+      try{
+        const sch=JSON.parse(saved.cronograma);
+        for(let s=1;s<=14;s++){
+          const d=sch[s]||{};
+          colMap[`Sesion_${s}`]=String(s);
+          if(d.mod) colMap[`Cronograma_Modulo_${s}`]=d.mod;
+          if(d.sub) colMap[`Cronograma_Subtema_${s}`]=d.sub;
+          if(s>=2&&d.note) colMap[`Actividades_EN_${s}`]=d.note;
+        }
+      }catch(e){}
+    }
+
+    await writeCourseToMaestro(sheetId,code,colMap);
+    toast(`✓ "${code}" guardado en Maestro (${Object.keys(colMap).length} columnas)`,'success');
+
+    // Flash save label
+    const lbl=document.getElementById('save-lbl');
+    lbl.textContent='✓ Sincronizado con Sheets';
+    lbl.classList.add('show');
+    setTimeout(()=>{lbl.classList.remove('show');lbl.textContent='✓ Guardado';},3000);
+
+  }catch(err){
+    toast('Error: '+err.message,'error');
+  }
   btn.textContent='↑ Guardar en Maestro';btn.disabled=false;
 }
 
