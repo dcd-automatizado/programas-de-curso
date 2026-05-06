@@ -1535,13 +1535,17 @@ async function pushToMaestro(){
 function buildMaestroColMap(saved) {
   const colMap = {};
 
-  // ── Descripción (4 parts joined) ─────────────────
-  const descParts = [
-    saved.descripcion_objeto,
-    saved.descripcion_import,
-    saved.descripcion_en_curso,
-    saved.descripcion_rasgos
-  ].filter(Boolean);
+  // ── Descripción (5 parts joined, with auto-generated temáticas sentence) ──
+  // Order: objeto → importancia → en_curso → temáticas+evaluaciones → rasgos
+  const descObj    = saved.descripcion_objeto   || '';
+  const descImp    = saved.descripcion_import   || '';
+  const descCurso  = saved.descripcion_en_curso || '';
+  const descRasgos = saved.descripcion_rasgos   || '';
+
+  // Auto-generate: "Las principales temáticas por abordar son [...]. Las estrategias de evaluación son [...]."
+  const tematicasSentence = buildTematicasSentence(saved);
+
+  const descParts = [descObj, descImp, descCurso, tematicasSentence, descRasgos].filter(Boolean);
   if (descParts.length) colMap['Descripción'] = descParts.join('\n\n');
 
   // ── Competencia ───────────────────────────────────
@@ -1585,7 +1589,7 @@ function buildMaestroColMap(saved) {
     if (n > 3) return;
     colMap[`Eva_Tabla${n}`]    = row.name;
     colMap[`Cantidad_Eva_${n}`] = String(row.count);
-    colMap[`Porcen_Tabla${n}`]  = String(row.pct / 100);   // decimal: 0.4
+    colMap[`Porcen_Tabla${n}`]  = `${row.pct}%`;            // texto: "40%"
     colMap[`Eva_Distri_${n}`]   = buildDistriText(row);     // "40% total" / "30%, 10% cada uno"
   });
 
@@ -1606,14 +1610,67 @@ function buildMaestroColMap(saved) {
       for (let s = 1; s <= 14; s++) {
         const d = sch[s] || {};
         colMap[`Sesion_${s}`] = String(s);
-        if (d.mod) colMap[`Cronograma_Modulo_${s}`]  = d.mod;
-        if (d.sub) colMap[`Cronograma_Subtema_${s}`] = d.sub;
+        // Use modName (full name) if available, else mod index
+        const cronModName = d.modName || d.mod || '';
+        if (cronModName) colMap[`Cronograma_Modulo_${s}`]  = cronModName;
+        if (d.sub)       colMap[`Cronograma_Subtema_${s}`] = d.sub;
         if (s >= 2 && d.note) colMap[`Actividades_EN_${s}`] = d.note;
       }
     } catch(e) {}
   }
 
   return colMap;
+}
+
+// ── Build "Las principales temáticas..." sentence ─────
+function buildTematicasSentence(saved) {
+  // Get module names
+  const mods = saved.modulos ? splitModulos(saved.modulos) : [];
+  // Get evaluation strategy names
+  const evaRows = parseEvaTablaText(saved.eva_tabla || '');
+
+  if (!mods.length && !evaRows.length) return '';
+
+  let sentence = '';
+
+  if (mods.length) {
+    // Each module name: strip "Módulo N. " prefix, lowercase
+    const modNames = mods.map(m => {
+      const clean = m.name
+        .replace(/^(m[oó]dulo|module)\s+\d+[.:]?\s*/i, '') // remove "Módulo 1. "
+        .trim()
+        .toLowerCase();
+      return clean;
+    });
+
+    // Join with Oxford-style comma list
+    const modList = listToSpanish(modNames);
+    sentence += `Las principales temáticas por abordar son ${modList}.`;
+  }
+
+  if (evaRows.length) {
+    const evaNames = evaRows.map(r => {
+      // Lowercase, add article if plural count
+      const n = r.name.toLowerCase();
+      return r.count > 1 ? `las ${n}` : `el ${n}`;
+    });
+    // Remove duplicate articles for cleanliness
+    const evaList = evaNames.join(', ').replace(/,([^,]+)$/, ' y$1');
+    if (sentence) sentence += ` Las estrategias de evaluación son ${evaList}.`;
+    else sentence = `Las estrategias de evaluación son ${evaList}.`;
+  }
+
+  return sentence;
+}
+
+// Join array as "a, b, c, así como d" (Spanish list)
+function listToSpanish(arr) {
+  if (!arr.length) return '';
+  if (arr.length === 1) return arr[0];
+  if (arr.length === 2) return `${arr[0]} y ${arr[1]}`;
+  const last = arr[arr.length - 1];
+  const rest = arr.slice(0, -1);
+  return `${rest.join(', ')}, así como ${last}`;
 }
 
 // ── Split modulos text block into [{name, subtemas}] ──
@@ -1696,12 +1753,26 @@ function buildSchedule(){
   const acts=[];
   ['e1','e2','e3'].forEach(ek=>{if(saved[ek])acts.push(saved[ek].split('\n')[0].trim());});
 
+  // Build module list from: saved modulos text > course sheet data
   const mods=[];
-  for(let i=1;i<=7;i++){
-    const k=`Modulo${i}`;
-    if(currentCourse?.[k]) mods.push({n:i,name:currentCourse[k]});
+  const sid2=currentProject?.sheetId;
+  const code2=currentCourse?.['Código']||'';
+  const saved2=maestroData[sid2]?.[code2]||{};
+
+  if(saved2.modulos){
+    // Parse from the modulos text block (most complete source)
+    const parsedMods = splitModulos(saved2.modulos);
+    parsedMods.forEach((m,i)=>mods.push({n:i+1, name:m.name, subtemas:m.subtemas}));
   }
-  if(!mods.length) mods.push({n:1,name:'Módulo 1'});
+
+  // Fallback: read from course Base sheet columns
+  if(!mods.length){
+    for(let i=1;i<=7;i++){
+      const k=`Modulo${i}`;
+      if(currentCourse?.[k]) mods.push({n:i, name:currentCourse[k], subtemas:[]});
+    }
+  }
+  if(!mods.length) mods.push({n:1, name:'Módulo 1', subtemas:[]});
 
   const cont=document.getElementById('sch-rows');
   cont.innerHTML='';
@@ -1710,7 +1781,7 @@ function buildSchedule(){
     const d=sch[s]||{};
     const row=document.createElement('div');row.className='sch-row';
 
-    const modOpts=mods.map(m=>`<option value="${m.n}" ${d.mod==m.n?'selected':''}>${m.name.slice(0,48)}</option>`).join('');
+    const modOpts=mods.map(m=>`<option value="${m.n}" data-name="${escAttr(m.name)}" data-subs="${escAttr((m.subtemas||[]).join('\n'))}" ${d.mod==m.n?'selected':''}>${m.name.slice(0,55)}</option>`).join('');
     const actOpts=acts.map(a=>`<option value="${a}" ${d.actName===a?'selected':''}>${a.slice(0,34)}</option>`).join('');
     const verbOpts=['Inicia','Continúa','Finaliza','Entrega','Realiza'].map(v=>`<option value="${v}" ${d.verb===v?'selected':''}>${v}</option>`).join('');
 
@@ -1732,6 +1803,16 @@ function buildSchedule(){
 
     if(s>=2){
       setTimeout(()=>{
+        // Auto-fill subtemas when module is selected
+        const modSel=document.getElementById(`sm${s}`);
+        const subTA=document.getElementById(`ss${s}`);
+        if(modSel) modSel.addEventListener('change',function(){
+          const opt=this.options[this.selectedIndex];
+          const subs=opt?.dataset?.subs||'';
+          if(subs && subTA && !subTA.value) subTA.value=subs;
+        });
+
+        // Auto-fill activity note when verb+activity selected
         const auto=()=>{
           const a=document.getElementById(`sa${s}`)?.value;
           const v=document.getElementById(`sv${s}`)?.value;
@@ -1752,8 +1833,11 @@ function buildSchedule(){
 function saveSchedule(){
   const data={};
   for(let s=1;s<=14;s++){
+    const modEl=document.getElementById(`sm${s}`);
+    const modOpt=modEl?.options[modEl.selectedIndex];
     data[s]={
-      mod:document.getElementById(`sm${s}`)?.value||'',
+      mod:modEl?.value||'',
+      modName:modOpt?.dataset?.name||modOpt?.text||'',
       sub:document.getElementById(`ss${s}`)?.value||'',
       actName:document.getElementById(`sa${s}`)?.value||'',
       verb:document.getElementById(`sv${s}`)?.value||'',
@@ -2108,6 +2192,9 @@ function renderFichaResult(data) {
 
 function escHtml(str) {
   return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escAttr(str) {
+  return (str||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/\n/g,'_NL_').replace(/\r/g,'');
 }
 
 function applyFichaField(secId, btn) {
