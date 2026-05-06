@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asistente Curricular · DCD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root {
+  --cream:    #f7f3ee;
+  --cream2:   #efe9e0;
+  --cream3:   #e4dbd0;
+  --paper:    #fdfaf6;
+  --ink:      #1c1a17;
+  --ink2:     #4a4540;
+  --ink3:     #7a7268;
+  --ink4:     #b0a89e;
+  --emerald:  #2d6a4f;
+  --emerald2: #40916c;
+  --emerald3: #d8f3dc;
+  --terra:    #b5552a;
+  --terra2:   #fde8df;
+  --gold:     #c9890f;
+  --gold2:    #fef3db;
+  --border:   #ddd5c8;
+  --shadow:   rgba(28,26,23,0.07);
+  --shadow2:  rgba(28,26,23,0.13);
+  --serif:    'Lora', Georgia, serif;
+  --sans:     'Outfit', sans-serif;
+  --mono:     'JetBrains Mono', monospace;
+  --r:        12px;
+  --rs:       8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--sans);background:var(--cream);color:var(--ink);min-height:100vh;font-size:15px;line-height:1.6;}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.022'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;}
+
+/* ── Screens ── */
+.screen{display:none;}
+.screen.active{display:block;}
+#screen-home.active{display:flex;flex-direction:column;min-height:100vh;}
+
+/* ══════════════════════════════════════
+   HOME
+══════════════════════════════════════ */
+.home-nav{display:flex;align-items:center;justify-content:space-between;padding:20px 56px;border-bottom:1px solid var(--border);background:var(--paper);}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand-mark{width:38px;height:38px;background:var(--emerald);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--serif);font-style:italic;font-size:18px;flex-shrink:0;}
+.brand-name{font-family:var(--serif);font-size:17px;font-weight:500;}
+.brand-name span{display:block;font-family:var(--sans);font-size:11px;font-weight:400;color:var(--ink3);letter-spacing:1.5px;text-transform:uppercase;}
+
+/* Google auth button area */
+.nav-auth{display:flex;align-items:center;gap:12px;}
+.auth-user{display:flex;align-items:center;gap:9px;background:var(--cream2);border:1px solid var(--border);border-radius:30px;padding:6px 14px 6px 6px;font-size:13px;color:var(--ink2);}
+.auth-avatar{width:26px;height:26px;border-radius:50%;background:var(--emerald3);display:flex;align-items:center;justify-content:center;font-size:12px;overflow:hidden;}
+.auth-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.auth-sign-out{font-size:11px;color:var(--ink4);cursor:pointer;text-decoration:underline;margin-left:4px;}
+.auth-sign-out:hover{color:var(--terra);}
+
+.home-main{display:grid;grid-template-columns:400px 1fr;flex:1;}
+.home-sidebar{background:var(--paper);border-right:1px solid var(--border);padding:60px 52px;display:flex;flex-direction:column;justify-content:center;}
+.home-sidebar h1{font-family:var(--serif);font-size:44px;line-height:1.15;font-weight:500;margin-bottom:18px;}
+.home-sidebar h1 em{font-style:italic;color:var(--emerald);}
+.home-sidebar>p{font-size:15px;color:var(--ink2);line-height:1.75;max-width:320px;margin-bottom:36px;}
+.home-features{display:flex;flex-direction:column;gap:12px;}
+.feat{display:flex;align-items:flex-start;gap:10px;}
+.feat-dot{width:6px;height:6px;background:var(--emerald);border-radius:50%;margin-top:8px;flex-shrink:0;}
+.feat p{font-size:13px;color:var(--ink3);margin:0;}
+
+.home-right{padding:44px 52px;overflow-y:auto;}
+.home-right h2{font-family:var(--serif);font-size:22px;font-weight:500;margin-bottom:4px;}
+.home-right>p{font-size:13px;color:var(--ink3);margin-bottom:28px;}
+
+/* Google sign-in prompt */
+.google-prompt{background:var(--paper);border:1.5px solid var(--border);border-radius:var(--r);padding:28px 32px;margin-bottom:28px;display:flex;align-items:flex-start;gap:18px;}
+.google-prompt-icon{font-size:28px;flex-shrink:0;margin-top:2px;}
+.google-prompt h3{font-family:var(--serif);font-size:18px;font-weight:500;margin-bottom:5px;}
+.google-prompt p{font-size:13px;color:var(--ink3);line-height:1.6;margin-bottom:16px;}
+.btn-google{display:inline-flex;align-items:center;gap:10px;padding:10px 20px;background:#fff;border:1.5px solid var(--border);border-radius:var(--rs);font-family:var(--sans);font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer;transition:all 0.18s;box-shadow:0 1px 4px var(--shadow);}
+.btn-google:hover{border-color:#4285f4;box-shadow:0 2px 8px rgba(66,133,244,0.15);}
+.btn-google svg{width:18px;height:18px;flex-shrink:0;}
+
+.projects-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:13px;}
+.project-card{background:var(--paper);border:1.5px solid var(--border);border-radius:var(--r);padding:22px 24px;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;}
+.project-card:hover{border-color:var(--emerald);box-shadow:0 4px 18px var(--shadow2);transform:translateY(-2px);}
+.pc-stripe{position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--emerald),var(--emerald2));opacity:0;transition:opacity 0.2s;}
+.project-card:hover .pc-stripe{opacity:1;}
+.pc-icon{width:38px;height:38px;background:var(--emerald3);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:13px;}
+.project-card h3{font-family:var(--serif);font-size:17px;font-weight:500;margin-bottom:4px;}
+.pc-url{font-family:var(--mono);font-size:10px;color:var(--ink4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:16px;}
+.pc-foot{display:flex;align-items:center;justify-content:space-between;}
+.pc-date{font-size:12px;color:var(--ink4);}
+.del-btn{width:27px;height:27px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--ink4);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all 0.18s;}
+.del-btn:hover{border-color:var(--terra);color:var(--terra);background:var(--terra2);}
+.add-card{border:2px dashed var(--cream3);border-radius:var(--r);padding:22px;cursor:pointer;transition:all 0.2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:144px;color:var(--ink4);}
+.add-card:hover{border-color:var(--emerald);color:var(--emerald);background:var(--emerald3);}
+.add-card .plus{font-size:26px;font-weight:300;line-height:1;}
+.add-card span{font-size:13px;font-weight:500;}
+
+/* ══════════════════════════════════════
+   MODAL
+══════════════════════════════════════ */
+.overlay{position:fixed;inset:0;background:rgba(28,26,23,0.4);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(5px);}
+.overlay.active{display:flex;}
+.modal{background:var(--paper);border:1px solid var(--border);border-radius:16px;padding:38px;width:90%;max-width:490px;box-shadow:0 24px 60px rgba(28,26,23,0.16);animation:mIn 0.22s ease;}
+@keyframes mIn{from{transform:translateY(16px) scale(0.97);opacity:0;}to{transform:none;opacity:1;}}
+.modal-ico{width:46px;height:46px;background:var(--emerald3);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:21px;margin-bottom:16px;}
+.modal h2{font-family:var(--serif);font-size:24px;font-weight:500;margin-bottom:5px;}
+.modal>p{font-size:14px;color:var(--ink3);margin-bottom:26px;}
+.fg{margin-bottom:16px;}
+.fg label{display:block;font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink3);margin-bottom:6px;}
+.fg input{width:100%;background:var(--cream);border:1.5px solid var(--border);border-radius:var(--rs);padding:10px 13px;color:var(--ink);font-family:var(--sans);font-size:14px;outline:none;transition:border-color 0.18s,box-shadow 0.18s;}
+.fg input:focus{border-color:var(--emerald);box-shadow:0 0 0 3px rgba(45,106,79,0.09);}
+.fg small{font-size:11px;color:var(--ink4);margin-top:5px;display:block;}
+.modal-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:26px;}
+
+/* ── Buttons ── */
+.btn{padding:10px 22px;border-radius:var(--rs);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.18s;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:var(--emerald);color:#fff;}
+.btn-primary:hover{background:var(--emerald2);transform:translateY(-1px);box-shadow:0 4px 13px rgba(45,106,79,0.28);}
+.btn-ghost{background:transparent;color:var(--ink2);border:1.5px solid var(--border);}
+.btn-ghost:hover{border-color:var(--ink3);color:var(--ink);}
+.btn-sm{padding:7px 16px;font-size:12px;}
+
+/* ══════════════════════════════════════
+   PROJECT SCREEN
+══════════════════════════════════════ */
+.topbar{background:var(--paper);border-bottom:1px solid var(--border);padding:0 48px;display:flex;align-items:center;gap:14px;height:62px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px var(--shadow);}
+.back-btn{display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:var(--rs);border:1.5px solid var(--border);background:transparent;color:var(--ink3);font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;transition:all 0.18s;white-space:nowrap;}
+.back-btn:hover{border-color:var(--emerald);color:var(--emerald);}
+.topbar-title{font-family:var(--serif);font-size:16px;font-weight:500;}
+.topbar-url{font-family:var(--mono);font-size:11px;color:var(--ink4);margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;}
+
+.proj-body{padding:44px 48px;max-width:1300px;}
+.config-hint{background:#fef9ec;border:1.5px solid #f0d58c;border-radius:var(--r);padding:16px 20px;font-size:13px;color:#7a5c0a;line-height:1.7;margin-bottom:24px;display:none;}
+.config-hint code{font-family:var(--mono);background:rgba(201,137,15,0.12);padding:1px 5px;border-radius:4px;font-size:11px;}
+.sec-hd{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:5px;}
+.sec-hd h2{font-family:var(--serif);font-size:24px;font-weight:500;}
+
+.period-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:18px 0 24px;}
+.ptab{padding:6px 16px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--paper);color:var(--ink3);transition:all 0.18s;}
+.ptab:hover{border-color:var(--emerald);color:var(--emerald);}
+.ptab.active{background:var(--emerald);color:#fff;border-color:var(--emerald);}
+
+.ct-wrap{background:var(--paper);border:1.5px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:0 2px 10px var(--shadow);}
+.ctable{width:100%;border-collapse:collapse;}
+.ctable thead th{background:var(--cream2);text-align:left;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--ink3);padding:11px 18px;border-bottom:1.5px solid var(--border);}
+.ctable tbody tr{border-bottom:1px solid var(--cream2);transition:background 0.14s;cursor:pointer;}
+.ctable tbody tr:last-child{border-bottom:none;}
+.ctable tbody tr:hover{background:var(--cream);}
+.ctable td{padding:13px 18px;font-size:14px;}
+.td-code{font-family:var(--mono);font-size:12px;color:var(--emerald);font-weight:500;}
+.td-name{font-weight:500;}
+.td-m{color:var(--ink3);font-size:13px;}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;}
+.b-empty{background:var(--cream2);color:var(--ink4);}
+.b-partial{background:var(--gold2);color:var(--gold);}
+.b-done{background:var(--emerald3);color:var(--emerald);}
+.work-btn{padding:6px 16px;background:var(--emerald);color:#fff;border:none;border-radius:var(--rs);font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.18s;}
+.work-btn:hover{background:var(--emerald2);}
+
+.loading-state{text-align:center;padding:72px 20px;color:var(--ink3);}
+.spinner{width:34px;height:34px;border:3px solid var(--cream3);border-top-color:var(--emerald);border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto 14px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.err-card{background:var(--terra2);border:1.5px solid rgba(181,85,42,0.22);border-radius:var(--r);padding:18px 20px;color:var(--terra);font-size:14px;line-height:1.7;}
+
+/* ══════════════════════════════════════
+   COURSE WORK SCREEN
+══════════════════════════════════════ */
+.course-hero{background:var(--paper);border-bottom:1.5px solid var(--border);padding:36px 48px 28px;}
+.course-code-tag{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--emerald);background:var(--emerald3);border-radius:6px;padding:3px 10px;display:inline-block;margin-bottom:9px;}
+.course-hero h1{font-family:var(--serif);font-size:32px;font-weight:500;margin-bottom:14px;line-height:1.2;}
+.meta-row{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:22px;}
+.mpill{font-size:12px;color:var(--ink3);background:var(--cream2);border:1px solid var(--border);border-radius:20px;padding:3px 11px;}
+.prog-track{height:5px;background:var(--cream3);border-radius:3px;overflow:hidden;max-width:380px;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--emerald),var(--emerald2));border-radius:3px;transition:width 0.5s ease;}
+.prog-lbl{font-size:12px;color:var(--ink4);margin-top:5px;}
+
+/* Section selector */
+.sec-sel{padding:36px 48px;background:var(--cream);}
+.sec-sel h3{font-family:var(--serif);font-size:19px;font-weight:500;margin-bottom:4px;}
+.sec-sel>p{font-size:13px;color:var(--ink3);margin-bottom:22px;}
+.sec-cat{margin-bottom:24px;}
+.sec-cat-lbl{font-size:11px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink4);margin-bottom:9px;display:flex;align-items:center;gap:8px;}
+.sec-cat-lbl::after{content:'';flex:1;height:1px;background:var(--border);}
+.sec-pills{display:flex;flex-wrap:wrap;gap:7px;}
+.spill{display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border-radius:30px;border:1.5px solid var(--border);background:var(--paper);cursor:pointer;font-size:13px;font-weight:500;color:var(--ink2);transition:all 0.17s;}
+.spill:hover{border-color:var(--emerald);color:var(--emerald);transform:translateY(-1px);box-shadow:0 3px 9px var(--shadow);}
+.spill.active{background:var(--emerald);border-color:var(--emerald);color:#fff;box-shadow:0 4px 13px rgba(45,106,79,0.28);}
+.spill.has-data{border-color:var(--emerald2);}
+.spill.has-data:not(.active){color:var(--emerald);}
+.spill .pico{font-size:13px;}
+.spill .pck{width:15px;height:15px;border-radius:50%;background:var(--emerald3);color:var(--emerald);font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;}
+.spill.active .pck{background:rgba(255,255,255,0.25);color:#fff;}
+
+/* Work panel */
+.work-panel{margin:0 48px 48px;background:var(--paper);border:1.5px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:0 4px 22px var(--shadow2);display:none;animation:pIn 0.22s ease;}
+@keyframes pIn{from{opacity:0;transform:translateY(11px);}to{opacity:1;transform:none;}}
+.work-panel.visible{display:block;}
+.wp-head{display:flex;align-items:center;gap:13px;padding:18px 26px;border-bottom:1.5px solid var(--border);background:var(--cream);}
+.wp-ico{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.wp-title{font-family:var(--serif);font-size:18px;font-weight:500;}
+.wp-sub{font-size:12px;color:var(--ink3);margin-top:1px;}
+.wp-body{display:grid;grid-template-columns:1fr 350px;}
+.result-area{padding:26px;border-right:1.5px solid var(--border);display:flex;flex-direction:column;gap:11px;}
+.area-lbl{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--ink4);display:flex;align-items:center;gap:6px;}
+.area-lbl::before{content:'';display:block;width:11px;height:2px;background:var(--emerald);border-radius:1px;}
+.result-ta{flex:1;background:var(--cream);border:1.5px solid var(--border);border-radius:var(--rs);padding:13px 15px;color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.7;resize:vertical;outline:none;min-height:200px;transition:border-color 0.18s,box-shadow 0.18s;}
+.result-ta:focus{border-color:var(--emerald);box-shadow:0 0 0 3px rgba(45,106,79,0.08);}
+.res-actions{display:flex;gap:8px;justify-content:flex-end;}
+.prompt-area{background:var(--cream);padding:26px;display:flex;flex-direction:column;gap:11px;}
+.prompt-hd{display:flex;align-items:center;justify-content:space-between;}
+.copy-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;background:var(--paper);border:1.5px solid var(--border);border-radius:var(--rs);color:var(--ink3);font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;transition:all 0.18s;}
+.copy-btn:hover{border-color:var(--emerald);color:var(--emerald);}
+.copy-btn.copied{border-color:var(--emerald);color:var(--emerald);background:var(--emerald3);}
+.prompt-box{background:var(--paper);border:1.5px solid var(--border);border-radius:var(--rs);padding:14px;font-size:12px;font-family:var(--mono);color:var(--ink2);line-height:1.7;white-space:pre-wrap;word-break:break-word;flex:1;overflow-y:auto;max-height:370px;}
+.prompt-box .ph{background:#fff3cd;color:#856404;border-radius:3px;padding:1px 5px;font-weight:600;border:1px solid #ffe083;}
+.related-strip{padding:13px 26px;border-top:1.5px solid var(--border);background:#fffef9;display:flex;align-items:center;flex-wrap:wrap;gap:7px;}
+.rel-lbl{font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--ink4);}
+.rel-chip{font-size:11px;background:var(--cream2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;color:var(--ink3);cursor:help;transition:all 0.17s;max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rel-chip:hover{border-color:var(--emerald2);color:var(--emerald);}
+
+/* Google Sheets sync status */
+.sheets-status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink3);}
+.sheets-dot{width:8px;height:8px;border-radius:50%;background:var(--ink4);}
+.sheets-dot.connected{background:var(--emerald2);}
+.sheets-dot.syncing{background:var(--gold);animation:pulse 1s ease infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+
+/* Save topbar */
+.save-bar{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.save-lbl{font-size:12px;color:var(--emerald);font-weight:500;opacity:0;transition:opacity 0.3s;}
+.save-lbl.show{opacity:1;}
+
+/* Schedule panel */
+#schedule-panel{margin:0 48px 48px;background:var(--paper);border:1.5px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:0 4px 22px var(--shadow2);display:none;}
+.sch-head-cols{display:grid;grid-template-columns:50px 1fr 190px 1fr;gap:9px;padding:8px 14px 6px;background:var(--cream2);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--ink4);}
+.sch-row{display:grid;grid-template-columns:50px 1fr 190px 1fr;gap:9px;padding:10px 14px;border-bottom:1px solid var(--cream2);align-items:start;transition:background 0.13s;}
+.sch-row:hover{background:var(--cream);}
+.sch-sess{font-family:var(--mono);font-size:11px;color:var(--emerald);font-weight:600;background:var(--emerald3);border-radius:6px;height:30px;display:flex;align-items:center;justify-content:center;margin-top:1px;}
+.sch-drop{display:flex;flex-direction:column;gap:5px;}
+.sch-sel,.sch-ta{width:100%;background:var(--cream);border:1.5px solid var(--border);border-radius:var(--rs);padding:6px 9px;color:var(--ink);font-family:var(--sans);font-size:12px;outline:none;transition:border-color 0.17s;}
+.sch-sel:focus,.sch-ta:focus{border-color:var(--emerald);}
+.sch-ta{resize:vertical;min-height:54px;line-height:1.5;}
+
+/* Toast */
+.toast{position:fixed;bottom:26px;right:26px;background:var(--ink);color:#fff;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:500;z-index:9000;transform:translateY(60px);opacity:0;transition:all 0.28s cubic-bezier(0.34,1.56,0.64,1);display:flex;align-items:center;gap:8px;box-shadow:0 8px 30px rgba(28,26,23,0.22);max-width:380px;}
+.toast.show{transform:none;opacity:1;}
+.toast.t-success{background:var(--emerald);}
+.toast.t-error{background:var(--terra);}
+
+@media(max-width:900px){
+  .home-main{grid-template-columns:1fr;}
+  .home-sidebar{padding:36px 24px;}
+  .home-right{padding:28px 24px;}
+  .home-nav,.topbar{padding-left:20px;padding-right:20px;}
+  .proj-body,.course-hero,.sec-sel{padding-left:20px;padding-right:20px;}
+  .work-panel,#schedule-panel{margin-left:14px;margin-right:14px;}
+  .wp-body{grid-template-columns:1fr;}
+  .prompt-area{border-left:none;border-top:1.5px solid var(--border);}
+  .sch-row,.sch-head-cols{grid-template-columns:40px 1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     HOME
+══════════════════════════════════════ -->
+<div id="screen-home" class="screen active">
+  <nav class="home-nav">
+    <div class="brand">
+      <div class="brand-mark">D</div>
+      <div class="brand-name">Asistente Curricular<span>DCD · CENFOTEC</span></div>
+    </div>
+    <div class="nav-auth" id="nav-auth">
+      <!-- Populated by JS -->
+    </div>
+  </nav>
+
+  <div class="home-main">
+    <div class="home-sidebar">
+      <h1>Diseño de<br>programas<br><em>de curso</em></h1>
+      <p>Gestiona cada sección del Maestro con prompts listos y escribe directamente en tu Google Sheet.</p>
+      <div class="home-features">
+        <div class="feat"><div class="feat-dot"></div><p>Lee la hoja <strong>Base</strong> de cualquier Google Sheets</p></div>
+        <div class="feat"><div class="feat-dot"></div><p>Prompts personalizados por curso y por sección</p></div>
+        <div class="feat"><div class="feat-dot"></div><p>Escribe en la hoja <strong>Maestro</strong> con tu cuenta Google</p></div>
+        <div class="feat"><div class="feat-dot"></div><p>Constructor de cronograma de 14 sesiones</p></div>
+      </div>
+    </div>
+
+    <div class="home-right">
+      <h2>Proyectos</h2>
+      <p>Cada proyecto apunta a un programa con su Google Sheet.</p>
+
+      <!-- Google sign-in prompt (shown when not authed) -->
+      <div class="google-prompt" id="google-prompt" style="display:none">
+        <div class="google-prompt-icon">🔗</div>
+        <div>
+          <h3>Conecta tu cuenta Google</h3>
+          <p>Para escribir resultados directamente en la hoja Maestro de tus Google Sheets, inicia sesión. Solo se solicitará permiso de lectura/escritura en Sheets.</p>
+          <button class="btn-google" onclick="googleSignIn()">
+            <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Iniciar sesión con Google
+          </button>
+        </div>
+      </div>
+
+      <div class="projects-grid" id="projects-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PROJECT SCREEN
+══════════════════════════════════════ -->
+<div id="screen-project" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="showHome()">← Inicio</button>
+    <div class="topbar-title" id="proj-name-disp"></div>
+    <div class="topbar-url" id="proj-url-disp"></div>
+    <div class="sheets-status" id="sheets-status" style="margin-left:12px">
+      <div class="sheets-dot" id="sheets-dot"></div>
+      <span id="sheets-status-txt">Sin conexión</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="syncSheets()" id="sync-btn" style="margin-left:6px;">⟳ Sincronizar</button>
+  </div>
+
+  <div class="proj-body">
+    <div class="config-hint" id="config-hint">
+      <strong>📋 Configuración requerida:</strong> El Sheet debe ser público o compartido con "Cualquier persona con el enlace puede ver". En Google Sheets: <strong>Archivo → Compartir → Publicar en la web → hoja Base → CSV</strong>. El nombre exacto debe ser <code>Base</code>.
+    </div>
+    <div class="sec-hd"><div><h2>Cursos del programa</h2><p id="course-count" style="font-size:13px;color:var(--ink3);">Cargando…</p></div></div>
+    <div class="period-tabs" id="period-tabs"></div>
+    <div id="courses-container"><div class="loading-state"><div class="spinner"></div><p>Conectando con Google Sheets…</p></div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     COURSE WORK SCREEN
+══════════════════════════════════════ -->
+<div id="screen-course" class="screen">
+  <div class="topbar">
+    <button class="back-btn" id="back-proj-btn">← Cursos</button>
+    <div id="topbar-course" style="font-weight:500;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:400px;color:var(--ink2)"></div>
+    <div class="save-bar">
+      <span class="save-lbl" id="save-lbl">✓ Guardado</span>
+      <div class="sheets-status" id="course-sheets-status" style="font-size:12px">
+        <div class="sheets-dot" id="course-sheets-dot"></div>
+        <span id="course-sheets-txt">Sin conexión Sheets</span>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="pushToMaestro()" id="push-btn">↑ Guardar en Maestro</button>
+    </div>
+  </div>
+
+  <div class="course-hero">
+    <div class="course-code-tag" id="ci-code"></div>
+    <h1 id="ci-name"></h1>
+    <div class="meta-row" id="ci-meta"></div>
+    <div class="prog-track"><div class="prog-fill" id="prog-bar" style="width:0%"></div></div>
+    <div class="prog-lbl" id="prog-lbl">0 secciones completadas</div>
+  </div>
+
+  <div class="sec-sel">
+    <h3>¿En qué trabajamos hoy?</h3>
+    <p>Selecciona una sección. El prompt se adapta automáticamente al curso.</p>
+    <div id="sec-grid"></div>
+  </div>
+
+  <div class="work-panel" id="work-panel">
+    <div class="wp-head">
+      <div class="wp-ico" id="wp-ico"></div>
+      <div><div class="wp-title" id="wp-title"></div><div class="wp-sub" id="wp-sub"></div></div>
+    </div>
+    <div class="wp-body">
+      <div class="result-area">
+        <div class="area-lbl">Tu resultado</div>
+        <textarea class="result-ta" id="result-ta" placeholder="Usa el prompt de la derecha en tu IA favorita y pega el resultado aquí…"></textarea>
+        <div class="res-actions">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('result-ta').value=''">Limpiar</button>
+          <button class="btn btn-primary btn-sm" onclick="saveSection()">✓ Guardar sección</button>
+        </div>
+      </div>
+      <div class="prompt-area">
+        <div class="prompt-hd">
+          <div class="area-lbl">Prompt listo</div>
+          <button class="copy-btn" id="copy-btn" onclick="copyPrompt()">⎘ Copiar</button>
+        </div>
+        <div class="prompt-box" id="prompt-box"></div>
+      </div>
+    </div>
+    <div class="related-strip" id="rel-strip" style="display:none">
+      <span class="rel-lbl">Relacionado:</span>
+      <div id="rel-chips"></div>
+    </div>
+  </div>
+
+  <!-- Schedule panel -->
+  <div id="schedule-panel">
+    <div class="wp-head">
+      <div class="wp-ico" style="background:#e8f5e9">📅</div>
+      <div><div class="wp-title">Cronograma de actividades</div><div class="wp-sub">Sesiones 1–14 · Módulos, subtemas y actividades por semana</div></div>
+    </div>
+    <div class="sch-head-cols"><div>Ses.</div><div>Módulo · Subtemas</div><div>Actividad</div><div>Texto del cronograma</div></div>
+    <div id="sch-rows" style="padding:4px 14px 0;"></div>
+    <div style="padding:16px 26px;border-top:1.5px solid var(--border);display:flex;justify-content:flex-end;gap:9px;">
+      <button class="btn btn-ghost btn-sm" onclick="clearSchedule()">Limpiar</button>
+      <button class="btn btn-primary btn-sm" onclick="saveSchedule()">✓ Guardar cronograma</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add project -->
+<div class="overlay" id="modal-add">
+  <div class="modal">
+    <div class="modal-ico">📂</div>
+    <h2>Nuevo proyecto</h2>
+    <p>Nombre del programa y URL de su Google Sheets.</p>
+    <div class="fg"><label>Nombre del programa</label><input type="text" id="in-name" placeholder="Ej: BAE I, BIROB, Maestría Cloud…"></div>
+    <div class="fg">
+      <label>URL de Google Sheets</label>
+      <input type="text" id="in-url" placeholder="https://docs.google.com/spreadsheets/d/…">
+      <small>Debe tener hojas llamadas <strong>Base</strong> y <strong>Maestro</strong>.</small>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="createProject()">Crear proyecto →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   GOOGLE OAUTH CONFIG
+   ─────────────────────────────────────────────────────
+   Para activar la escritura en Sheets debes:
+   1. Ir a https://console.cloud.google.com
+   2. Crear un proyecto → Habilitar "Google Sheets API"
+   3. Crear credenciales → OAuth 2.0 → Tipo: Aplicación web
+   4. Agregar origen autorizado: el dominio donde sirves este HTML
+      (o http://localhost:PORT para pruebas)
+   5. Reemplazar el CLIENT_ID de abajo con el tuyo.
+══════════════════════════════════════════════════════ */
+const GOOGLE_CLIENT_ID = 'TU_CLIENT_ID.apps.googleusercontent.com';
+const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
+
+/* ══════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════ */
+let projects = [];
+let currentProject = null;
+let currentCourse = null;
+let currentSection = null;
+let allCourses = [];
+let maestroData = {};
+let gAccessToken = null;
+let gUserInfo = null;
+
+try { projects = JSON.parse(localStorage.getItem('dcd_projects')||'[]'); } catch(e){}
+try { maestroData = JSON.parse(localStorage.getItem('dcd_maestro')||'{}'); } catch(e){}
+try { gAccessToken = localStorage.getItem('dcd_gtoken')||null; } catch(e){}
+try { gUserInfo = JSON.parse(localStorage.getItem('dcd_guser')||'null'); } catch(e){}
+
+/* ══════════════════════════════════════════════════════
+   GOOGLE IDENTITY SERVICES (OAuth)
+══════════════════════════════════════════════════════ */
+let tokenClient = null;
+
+function initGoogleAuth() {
+  if (!window.google?.accounts?.oauth2) {
+    // Library not yet loaded, retry
+    setTimeout(initGoogleAuth, 500);
+    return;
+  }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: SHEETS_SCOPE,
+    callback: onTokenReceived,
+  });
+  renderNavAuth();
+}
+
+function googleSignIn() {
+  if (!tokenClient) { toast('Google Identity Services no cargó aún. Intenta de nuevo.','error'); return; }
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+function onTokenReceived(resp) {
+  if (resp.error) { toast('Error al autenticar: '+resp.error,'error'); return; }
+  gAccessToken = resp.access_token;
+  localStorage.setItem('dcd_gtoken', gAccessToken);
+  // Fetch user profile
+  fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { Authorization: 'Bearer '+gAccessToken }
+  }).then(r=>r.json()).then(info=>{
+    gUserInfo = info;
+    localStorage.setItem('dcd_guser', JSON.stringify(info));
+    renderNavAuth();
+    toast('✓ Conectado como '+info.name,'success');
+    updateSheetsStatusAll();
+  });
+}
+
+function googleSignOut() {
+  if (gAccessToken) google.accounts.oauth2.revoke(gAccessToken, ()=>{});
+  gAccessToken = null;
+  gUserInfo = null;
+  localStorage.removeItem('dcd_gtoken');
+  localStorage.removeItem('dcd_guser');
+  renderNavAuth();
+  updateSheetsStatusAll();
+  toast('Sesión de Google cerrada','');
+}
+
+function renderNavAuth() {
+  const nav = document.getElementById('nav-auth');
+  const prompt = document.getElementById('google-prompt');
+  if (gUserInfo && gAccessToken) {
+    nav.innerHTML = `
+      <div class="auth-user">
+        <div class="auth-avatar">
+          ${gUserInfo.picture ? `<img src="${gUserInfo.picture}" alt="">` : gUserInfo.name?.[0]||'?'}
+        </div>
+        <span>${gUserInfo.name||gUserInfo.email}</span>
+        <span class="auth-sign-out" onclick="googleSignOut()">Salir</span>
+      </div>`;
+    if (prompt) prompt.style.display='none';
+  } else {
+    nav.innerHTML = `<button class="btn-google" onclick="googleSignIn()">
+      <svg viewBox="0 0 24 24" width="17" height="17"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Conectar Google Sheets
+    </button>`;
+    if (prompt) prompt.style.display='flex';
+  }
+}
+
+function updateSheetsStatusAll() {
+  const connected = !!(gAccessToken && gUserInfo);
+  // project screen
+  const dot = document.getElementById('sheets-dot');
+  const txt = document.getElementById('sheets-status-txt');
+  if (dot) dot.className = 'sheets-dot'+(connected?' connected':'');
+  if (txt) txt.textContent = connected ? ('Conectado · '+gUserInfo.email) : 'Sin conexión Sheets';
+  // course screen
+  const cdot = document.getElementById('course-sheets-dot');
+  const ctxt = document.getElementById('course-sheets-txt');
+  if (cdot) cdot.className = 'sheets-dot'+(connected?' connected':'');
+  if (ctxt) ctxt.textContent = connected ? '✓ Sheets conectado' : 'Sin conexión Sheets';
+  const pbtn = document.getElementById('push-btn');
+  if (pbtn) pbtn.title = connected ? '' : 'Inicia sesión con Google para escribir en Sheets';
+}
+
+/* ══════════════════════════════════════════════════════
+   GOOGLE SHEETS API — READ & WRITE
+══════════════════════════════════════════════════════ */
+function extractSheetId(url) {
+  const m = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  return m ? m[1] : null;
+}
+
+async function fetchBase(url) {
+  const id = extractSheetId(url);
+  if (!id) throw new Error('URL inválida de Google Sheets.');
+  const r = await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=Base`);
+  if (!r.ok) throw new Error(`No se pudo acceder (${r.status}). Verifica que el Sheet sea público.`);
+  return parseCSV(await r.text());
+}
+
+// Get all values from Maestro sheet to find header row and course rows
+async function getMaestroMeta(sheetId) {
+  if (!gAccessToken) throw new Error('No autenticado con Google.');
+  const r = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Maestro!1:200`,
+    { headers: { Authorization: 'Bearer '+gAccessToken } }
+  );
+  if (!r.ok) {
+    const err = await r.json();
+    if (r.status===401) { gAccessToken=null; localStorage.removeItem('dcd_gtoken'); renderNavAuth(); throw new Error('Sesión expirada. Vuelve a iniciar sesión con Google.'); }
+    throw new Error(err.error?.message||'Error leyendo Maestro.');
+  }
+  const data = await r.json();
+  return data.values||[];
+}
+
+// Write a single row to Maestro — finds the row by Código column
+async function writeCourseToMaestro(sheetId, courseCode, colMap) {
+  // colMap: { columnLetter: value, ... }
+  // We first read to find the row number
+  const rows = await getMaestroMeta(sheetId);
+  if (!rows.length) throw new Error('Hoja Maestro vacía o inaccessible.');
+
+  const headers = rows[0]; // row 1 = headers
+  // Find code column index (column "Código" or index 0)
+  const codeIdx = headers.indexOf('Código') !== -1 ? headers.indexOf('Código') : 0;
+
+  let targetRow = -1;
+  for (let i=1; i<rows.length; i++) {
+    if ((rows[i][codeIdx]||'').trim() === courseCode) { targetRow = i+1; break; } // 1-based
+  }
+  if (targetRow === -1) throw new Error(`No se encontró el curso "${courseCode}" en la hoja Maestro.`);
+
+  // Build batchUpdate requests
+  const requests = [];
+  for (const [col, value] of Object.entries(colMap)) {
+    if (!col || value===undefined || value===null) continue;
+    const colIdx = headers.indexOf(col);
+    if (colIdx === -1) continue; // column not found
+    const colLetter = colIdxToLetter(colIdx);
+    const range = `Maestro!${colLetter}${targetRow}`;
+    requests.push({ range, values:[[value]] });
+  }
+
+  if (!requests.length) throw new Error('No hay columnas reconocidas para actualizar.');
+
+  const r = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values:batchUpdate`,
+    {
+      method: 'POST',
+      headers: { Authorization: 'Bearer '+gAccessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valueInputOption: 'RAW', data: requests })
+    }
+  );
+  if (!r.ok) {
+    const err = await r.json();
+    if (r.status===401) { gAccessToken=null; localStorage.removeItem('dcd_gtoken'); renderNavAuth(); throw new Error('Sesión expirada. Vuelve a iniciar sesión.'); }
+    throw new Error(err.error?.message||'Error escribiendo en Maestro.');
+  }
+  return await r.json();
+}
+
+function colIdxToLetter(idx) {
+  let letter = '';
+  idx++; // 1-based
+  while (idx > 0) {
+    const rem = (idx-1) % 26;
+    letter = String.fromCharCode(65+rem) + letter;
+    idx = Math.floor((idx-1)/26);
+  }
+  return letter;
+}
+
+// CSV parser
+function parseCSV(text) {
+  const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+  if (lines.length<2) return [];
+  const headers = parseCSVLine(lines[0]);
+  return lines.slice(1).map(line=>{
+    const vals = parseCSVLine(line);
+    const obj = {};
+    headers.forEach((h,i)=>{ obj[h.replace(/^"|"$/g,'').trim()]=(vals[i]||'').replace(/^"|"$/g,'').trim(); });
+    return obj;
+  }).filter(r=>r['Curso']||r['Nombre']);
+}
+function parseCSVLine(line) {
+  const res=[]; let cur='',inQ=false;
+  for(let i=0;i<line.length;i++){
+    if(line[i]==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+    else if(line[i]===','&&!inQ){res.push(cur);cur='';}
+    else cur+=line[i];
+  }
+  res.push(cur); return res;
+}
+
+/* ══════════════════════════════════════════════════════
+   SECTIONS CONFIG
+══════════════════════════════════════════════════════ */
+const CATS = [
+  { label:'1. Descripción del curso', secs:[
+    {id:'descripcion_objeto',   label:'Objeto de estudio',          icon:'📖', col:'Descripción',                   pkey:'objeto_estudio',         related:[]},
+    {id:'descripcion_import',   label:'Importancia',                icon:'⭐', col:null,                            pkey:'importancia',            related:['descripcion_objeto']},
+    {id:'descripcion_en_curso', label:'En el curso…',               icon:'🎯', col:null,                            pkey:'en_curso',               related:['descripcion_objeto','competencia']},
+    {id:'descripcion_rasgos',   label:'Rasgos de perfil',           icon:'👤', col:null,                            pkey:'rasgos',                 related:['descripcion_objeto']},
+  ]},
+  { label:'2. Competencia', secs:[
+    {id:'competencia',          label:'Competencia del curso',      icon:'🏆', col:'Competencia',                   pkey:'competencia',            related:[]},
+  ]},
+  { label:'3. Resultados de aprendizaje', secs:[
+    {id:'ra1',label:'RA 1',icon:'1️⃣',col:'RA1',pkey:'ra',related:[]},
+    {id:'cd1',label:'CD 1',icon:'📋',col:'CD1',pkey:'cd',related:['ra1']},
+    {id:'e1', label:'Evidencia 1',icon:'📎',col:'E1',pkey:'ev',related:['ra1']},
+    {id:'ra2',label:'RA 2',icon:'2️⃣',col:'RA2',pkey:'ra',related:[]},
+    {id:'cd2',label:'CD 2',icon:'📋',col:'CD2',pkey:'cd',related:['ra2']},
+    {id:'e2', label:'Evidencia 2',icon:'📎',col:'E2',pkey:'ev',related:['ra2']},
+    {id:'ra3',label:'RA 3',icon:'3️⃣',col:'RA3',pkey:'ra',related:[]},
+    {id:'cd3',label:'CD 3',icon:'📋',col:'CD3',pkey:'cd',related:['ra3']},
+    {id:'e3', label:'Evidencia 3',icon:'📎',col:'E3',pkey:'ev',related:['ra3']},
+  ]},
+  { label:'4. Contenido temático', secs:[
+    {id:'modulos',label:'Módulos y Subtemas',icon:'📚',col:'Modulo1',pkey:'modulos',related:[]},
+  ]},
+  { label:'5. Metodologías y estrategias', secs:[
+    {id:'metodologias',label:'Metodologías',icon:'🧠',col:'Metodologías',pkey:'metodologias',related:['ra1','ra2','ra3','e1','e2','e3']},
+    {id:'estrategias', label:'Estrategias de Aprendizaje',icon:'🎲',col:'Estrategias de Aprendizaje',pkey:'estrategias',related:['e1','e2','e3']},
+  ]},
+  { label:'6. Evaluación', secs:[
+    {id:'eva_tabla',   label:'Tabla de Evaluaciones',       icon:'📊',col:'Tipo_Evaluacion_EN',pkey:'eva_tabla',  related:['e1','e2','e3']},
+    {id:'eva_tipo',    label:'Tipos de Evaluación',         icon:'🔍',col:null,                 pkey:'eva_tipo',   related:['e1','e2','e3']},
+    {id:'eva_desc1',   label:'Descripción Evaluación 1',    icon:'📝',col:'Eva_Descrip_1',      pkey:'eva_desc',   related:['ra1','e1']},
+    {id:'eva_desc2',   label:'Descripción Evaluación 2',    icon:'📝',col:'Eva_Descrip_2',      pkey:'eva_desc',   related:['ra2','e2']},
+    {id:'eva_desc3',   label:'Descripción Evaluación 3',    icon:'📝',col:'Eva_Descrip_3',      pkey:'eva_desc',   related:['ra3','e3']},
+  ]},
+  { label:'7. Recursos y bibliografía', secs:[
+    {id:'recursos',    label:'Recursos Didácticos',         icon:'🛠️',col:'Recursos',                    pkey:'recursos',   related:[]},
+    {id:'biblio_ob',   label:'Bibliografía Obligatoria',    icon:'📕',col:'Bibliografia_Obligatoria',    pkey:'biblio',     related:[]},
+    {id:'biblio_co',   label:'Bibliografía Complementaria', icon:'📗',col:'Bibliografia_Complementaria', pkey:'biblio',     related:[]},
+  ]},
+  { label:'8. Cronograma', secs:[
+    {id:'cronograma',  label:'Cronograma 14 sesiones',      icon:'📅',col:'Sesion_1',isSchedule:true,pkey:'cronograma',related:['e1','e2','e3','modulos']},
+  ]},
+];
+const ALL_SECS = CATS.flatMap(c=>c.secs);
+
+// Map section id → Maestro column header (for write)
+const SEC_COL_MAP = {};
+ALL_SECS.forEach(s=>{ if(s.col) SEC_COL_MAP[s.id]=s.col; });
+// Special: cronograma maps to multiple columns
+const CRONOGRAMA_COLS = ['Sesion_1','Cronograma_Modulo_1','Cronograma_Subtema_1',
+  'Sesion_2','Cronograma_Modulo_2','Cronograma_Subtema_2','Actividades_EN_2',
+  'Sesion_3','Cronograma_Modulo_3','Cronograma_Subtema_3','Actividades_EN_3',
+  'Sesion_4','Cronograma_Modulo_4','Cronograma_Subtema_4','Actividades_EN_4',
+  'Sesion_5','Cronograma_Modulo_5','Cronograma_Subtema_5','Actividades_EN_5',
+  'Sesion_6','Cronograma_Modulo_6','Cronograma_Subtema_6','Actividades_EN_6',
+  'Sesion_7','Cronograma_Modulo_7','Cronograma_Subtema_7','Actividades_EN_7',
+  'Sesion_8','Cronograma_Modulo_8','Cronograma_Subtema_8','Actividades_EN_8',
+  'Sesion_9','Cronograma_Modulo_9','Cronograma_Subtema_9','Actividades_EN_9',
+  'Sesion_10','Cronograma_Modulo_10','Cronograma_Subtema_10','Actividades_EN_10',
+  'Sesion_11','Cronograma_Modulo_11','Cronograma_Subtema_11','Actividades_EN_11',
+  'Sesion_12','Cronograma_Modulo_12','Cronograma_Subtema_12','Actividades_EN_12',
+  'Sesion_13','Cronograma_Modulo_13','Cronograma_Subtema_13','Actividades_EN_13',
+  'Sesion_14','Cronograma_Modulo_14','Cronograma_Subtema_14','Actividades_EN_14'];
+
+/* ══════════════════════════════════════════════════════
+   PROMPTS
+══════════════════════════════════════════════════════ */
+function buildPrompt(pkey, course, saved, secId) {
+  const c = course;
+  const s = saved;
+  const name = c['Curso']||c['Nombre']||'';
+  const cr = c['Créditos']||'3';
+  const hd = c['Horas Docencia']||c['Lectivas']||'3';
+
+  const prompts = {
+    objeto_estudio:`Eres un experto en diseño curricular universitario.
+
+Crea el OBJETO DE ESTUDIO para el curso "${name}".
+
+ESTRUCTURA: Sujeto + Verbo copulativo (se define como / se concibe como) + Atributo robusto + Adverbio de propósito
+
+REGLAS ESTRICTAS:
+- Sin listas de más de dos elementos
+- Verbos SIEMPRE nominalizados
+- Sin conectores "mediante", "a través de"
+- Lenguaje cotidiano, sin tecnicismos excesivos
+- Una sola oración fluida y con peso disciplinar
+
+EJEMPLO:
+"El monitoreo de redes se define como la supervisión continua del comportamiento operativo de la infraestructura de comunicación para la detección temprana de anomalías que comprometan la disponibilidad del servicio."
+
+Crea el objeto de estudio para: [${name}]
+Créditos: ${cr} | Horas docencia: ${hd}`,
+
+    importancia:`Redacta la IMPORTANCIA del curso "${name}":
+
+ESTRUCTURA:
+"La importancia de esta asignatura en la formación del profesional radica en que [el — de X] + [verbo nominalizado] + [beneficio profesional concreto]"
+
+REGLAS:
+- Enfoque PROFESIONAL (mundo laboral, no académico genérico)
+- Verbos nominalizados
+- Máximo dos beneficios conectados
+- Sin frases: "el aprendizaje", "el conocimiento", "los fundamentos", "el dominio"
+
+OBJETO DE ESTUDIO YA CREADO:
+${s?.descripcion_objeto||'[Completa primero el objeto de estudio]'}`,
+
+    en_curso:`Redacta el fragmento "EN EL CURSO…" del curso "${name}":
+
+ESTRUCTURA:
+"En el curso ${name}, los estudiantes [verbo activo] + [complemento directo] + [adverbio de propósito] + [adverbio de modo]"
+
+REGLAS CRÍTICAS:
+- Sin repetir sustantivos/verbos de las secciones anteriores
+- Sin "mediante" ni conectores similares
+- Sin "comprenden", "aprenden", "desarrollan habilidades"
+
+COMPETENCIA: ${s?.competencia||'[Completa primero la competencia]'}
+OBJETO DE ESTUDIO: ${s?.descripcion_objeto||'[Pendiente]'}`,
+
+    rasgos:`Elabora 3 rasgos del perfil profesional para el curso "${name}":
+
+ESTRUCTURA: "Este curso se relaciona con los siguientes rasgos del perfil profesional: [RASGO 1], [RASGO 2] y [RASGO 3]."
+
+TIPOS:
+1. DECLARATIVO: identificar/reconocer/determinar + objeto + para + propósito
+2. PROCEDIMENTAL: ejecutar/implementar/desarrollar + acción + para + objetivo
+3. ACTITUDINAL: mostrar/demostrar + actitud + para + valor ético
+
+REGLAS: Entre comillas cada rasgo. Un solo párrafo. Rasgos amplios y detallados.
+
+OBJETO DE ESTUDIO: ${s?.descripcion_objeto||'[Pendiente]'}`,
+
+    competencia:`Crea la COMPETENCIA para el curso "${name}":
+
+ESTRUCTURA OBLIGATORIA:
+[Verbo infinitivo] + [Complemento directo] + para + [Propósito] + [Gerundio] + [Complemento del gerundio] + [Cláusula adverbial que + subjuntivo]
+
+PROHIBIDO:
+- Listas de 3+ elementos (máximo 2)
+- "mediante", "a través de", "por medio de"
+- Adjetivos valorativos: "adecuado", "correcto", "efectivo"
+- Repetir el verbo entre infinitivo y gerundio
+
+EJEMPLO CORRECTO:
+✅ "Desarrollar modelos de simulación robótica para predecir comportamiento de máquinas autónomas implementando algoritmos de cinemática que aseguren precisión del movimiento articular."
+
+Curso: ${name} | Créditos: ${cr}`,
+
+    ra:(()=>{
+      const n=(secId||'ra1').replace('ra','');
+      return `Crea el RESULTADO DE APRENDIZAJE ${n} para el curso "${name}":
+
+ESTRUCTURA: Verbo + [complemento directo] + [gerundio único] + [complemento] + [frase adverbial]
+
+GERUNDIOS PERMITIDOS: aplicando, empleando, implementando, incorporando, ejecutando, utilizando, gestionando, justificando, argumentando
+
+REGLA: Si es proyecto → nombre directo. Si es otra actividad → agrega contexto con "sobre/relacionado con".
+
+EJEMPLOS:
+"Resuelve estudios de casos sobre la planificación de infraestructura, fundamentando decisiones con marcos de referencia que garanticen el diseño de sistemas escalables."
+"Desarrolla el prototipo de [nombre], implementando [técnica] que permita [resultado concreto del proyecto]."
+
+Curso: ${name} — genera RA${n} con su actividad de evaluación correspondiente.`;
+    })(),
+
+    cd:(()=>{
+      const n=(secId||'cd1').replace('cd','');
+      const raKey=`ra${n}`;
+      return `Crea los CRITERIOS DE DESEMPEÑO para RA${n} del curso "${name}":
+
+RA${n}: ${s?.[raKey]||'[Completa primero el RA'+n+']'}
+
+CANTIDAD:
+- Si es PROYECTO: 15 criterios secuenciales
+- Si es OTRA ACTIVIDAD: 8–10 criterios genéricos
+
+ESTRUCTURA: [Verbo en taxonomía ≤ al del RA] + complemento directo + información extra
+
+PROHIBIDO: "para", gerundios, adjetivos valorativos (bien, correcto, efectivo, adecuado), "mediante"
+
+EJEMPLO: "Examina los requerimientos y restricciones del diseño en el contexto organizacional."`;
+    })(),
+
+    ev:(()=>{
+      const n=(secId||'e1').replace('e','');
+      return `Define la EVIDENCIA ${n} del curso "${name}":
+
+RA${n}: ${s?.[`ra${n}`]||'[Pendiente]'}
+
+Responde SOLO con:
+- Nombre de la actividad (ej: "Proyecto integrador", "Estudio de casos", "Prácticas", "Portafolio de evidencias")
+- Tipo del entregable (ej: "Documento técnico escrito", "Presentación oral ante el grupo")
+
+Una línea por elemento, sin descripción extensa todavía.`;
+    })(),
+
+    modulos:`Diseña MÓDULOS Y SUBTEMAS para el curso "${name}":
+
+5–7 módulos, cada uno con:
+- Nombre del módulo (descriptivo, disciplinar, no genérico)
+- 4–6 subtemas específicos y evaluables
+
+REGLAS:
+- Progresión lógica: fundamentos → aplicación
+- Sin repetir conceptos entre módulos
+- Lenguaje disciplinar concreto
+
+Créditos: ${cr} | T: ${c['Horas teoría']||c['Teoria']||'1'}h | L: ${c['Horas laboratorio']||c['Lab']||'1'}h | P: ${c['Horas práctica']||c['Practica']||'1'}h`,
+
+    metodologias:`Redacta las 6 METODOLOGÍAS para el curso "${name}":
+
+ORDEN OBLIGATORIO:
+1. Enseñanza directa
+2. [Metodología adicional del pool]
+3. Aprendizaje basado en proyectos
+4. Aprendizaje autónomo
+5. Aprendizaje colaborativo
+6. Guía del docente
+
+POOL ADICIONAL (elige 1): Aprendizaje por descubrimiento · Aprendizaje interactivo · Aprendizaje experiencial · Enseñanza-aprendizaje indirecto · Estudio de casos
+
+LONGITUD: 280–350 caracteres por metodología. Lenguaje sencillo y claro.
+
+ACTIVIDADES DEL CURSO:
+RA1: ${s?.ra1||'[Pendiente]'}
+RA2: ${s?.ra2||'[Pendiente]'}
+RA3: ${s?.ra3||'[Pendiente]'}
+Evidencias: ${s?.e1||'—'} / ${s?.e2||'—'} / ${s?.e3||'—'}`,
+
+    estrategias:`Crea las ESTRATEGIAS DE APRENDIZAJE CON PROPÓSITO del curso "${name}":
+
+ESTRUCTURA: [Nombre actividad] + [permite/favorece/facilita/fomenta/propicia/promueve] + [sujeto] + [propósito educativo]
+
+LONGITUD: 40–50 palabras cada una.
+REGLA clave: verbos con artículos → ❌ "permite desarrollar" → ✅ "permite el desarrollo"
+
+Inicia cada estrategia con el nombre de la actividad.
+
+ACTIVIDADES:
+1. ${s?.e1||'[Evidencia 1 pendiente]'}
+2. ${s?.e2||'[Evidencia 2 pendiente]'}
+3. ${s?.e3||'[Evidencia 3 pendiente]'}`,
+
+    eva_tabla:`Define la TABLA DE EVALUACIONES del curso "${name}":
+
+Formato (3 actividades con):
+| Nombre de la actividad | Cantidad | Porcentaje |
+
+REGLAS:
+- Total = 100%
+- Actividad mayor (proyecto/entregable integrador) ≈ 40%
+- Actividades secundarias ≈ 30% cada una
+
+Evidencias identificadas:
+E1: ${s?.e1||'[Pendiente]'}
+E2: ${s?.e2||'[Pendiente]'}
+E3: ${s?.e3||'[Pendiente]'}`,
+
+    eva_tipo:`Crea los TIPOS DE EVALUACIÓN del curso "${name}":
+
+1. DIAGNÓSTICA — "La evaluación diagnóstica + [qué es]. Al inicio de cada lección, el docente [acción]. Esta evaluación [propósito]."
+2. FORMATIVA — "[qué es]. Durante el curso, se promueve [dos actividades formativas] sobre [relación disciplinar] con el propósito de [utilidad]."
+3. SUMATIVA — "[qué es]. En este curso, los estudiantes ponen en práctica lo aprendido + [lista actividades del curso]."
+
+REGLAS: Verbos nominalizados. Sin frases pedagógicas genéricas ("desarrollo del aprendizaje", "construcción del conocimiento").
+
+Sumativas: ${s?.e1||''} / ${s?.e2||''} / ${s?.e3||''}`,
+
+    eva_desc:(()=>{
+      const n=(secId||'eva_desc1').replace('eva_desc','');
+      return `Crea la DESCRIPCIÓN DE EVALUACIÓN ${n} del curso "${name}":
+
+3 BLOQUES OBLIGATORIOS:
+
+[Bloque 1 — Qué es] máx. 60 palabras.
+Patrón: "[Nombre] consiste en [qué implica] con el fin de [propósito disciplinar concreto, NO académico]."
+
+[Bloque 2 — Cómo] máx. 50 palabras.
+Patrón: "Los estudiantes [verbo técnico] [qué] a partir de [condición], de manera que aplican [1–2 acciones técnicas]."
+
+[Bloque 3 — Qué se evalúa] 80–120 palabras.
+Inicia: "Esta estrategia de evaluación se compone de un documento técnico que incorpora [la portada, el índice, …, las referencias] así como [presentación oral si aplica]."
+
+SIN: gerundios dobles, "donde/dicha/este" repetitivos, herramientas específicas en Bloque 1.
+
+Actividad ${n}: ${s?.[`e${n}`]||'[Pendiente]'}
+RA ${n}: ${s?.[`ra${n}`]||'[Pendiente]'}`;
+    })(),
+
+    recursos:`Crea los RECURSOS DIDÁCTICOS del curso "${name}":
+
+TIPO 1 — EXPERIENCIA PREVIA (1 recurso):
+"Los conocimientos [y la experiencia] previa sobre [requisito del curso] [facilita/permite] que los estudiantes [utilidad específica al curso en una sola oración robusta]."
+
+TIPO 2 — SOFTWARE (1–3 herramientas del área, gratuitas y en web):
+"La aplicación/El software [nombre] de uso gratuito y disponible en la web [facilita/permite] que en este curso los estudiantes [utilidad específica]."
+
+Incluir SIEMPRE al final:
+- La Biblioteca Universitaria Ignacio Trejos Zelaya (recurso bibliográfico)
+- El servicio licenciado Google Workspace for Education
+
+REGLAS: Una sola oración por recurso. Verbos nominalizados. Sin gerundios.
+
+Requisitos del curso: ${c['Requisitos']||'No especificados'}`,
+
+    biblio:`Propón REFERENCIAS BIBLIOGRÁFICAS en APA 7 para el curso "${name}":
+
+OBLIGATORIA (3 referencias):
+- Libros especializados del área
+- Preferiblemente 2019–2025
+- Con URL digital (OverDrive, eLibro, Springer, Taylor & Francis, etc.)
+
+COMPLEMENTARIA (2 referencias):
+- Obras complementarias; si son anteriores a 2015 añadir "(Classic Book)"
+
+FORMATO: Apellido, N. (Año). Título en cursiva. Editorial. https://url
+
+Área disciplinar: ${name}`,
+
+    cronograma:`Panel de cronograma integrado debajo.`,
+  };
+
+  return prompts[pkey] || '(Sin prompt definido para esta sección.)';
+}
+
+/* ══════════════════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════════════════ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function showHome(){ showScreen('home'); renderProjects(); }
+function showProject(pid){
+  currentProject = projects.find(p=>p.id===pid);
+  if(!currentProject) return;
+  document.getElementById('proj-name-disp').textContent = currentProject.name;
+  document.getElementById('proj-url-disp').textContent = (currentProject.url||'').slice(0,55)+'…';
+  showScreen('project');
+  updateSheetsStatusAll();
+  loadCourses();
+}
+function showCourseWork(course){
+  currentCourse = course;
+  currentSection = null;
+  const name = course['Curso']||course['Nombre']||'';
+  const code = course['Código']||'';
+  document.getElementById('topbar-course').textContent = `${code} · ${name}`;
+  document.getElementById('ci-code').textContent = code;
+  document.getElementById('ci-name').textContent = name;
+  const meta = document.getElementById('ci-meta');
+  meta.innerHTML=[
+    course['Créditos']?`<span class="mpill">⚡ ${course['Créditos']} cr.</span>`:'',
+    (course['Horas Docencia']||course['Lectivas'])?`<span class="mpill">🕐 ${course['Horas Docencia']||course['Lectivas']}h</span>`:'',
+    (course['Periodo']||course['Ubicación'])?`<span class="mpill">📍 Período ${course['Periodo']||course['Ubicación']}</span>`:'',
+    course['Requisitos']?`<span class="mpill" title="${course['Requisitos']}">📋 ${(course['Requisitos']||'').slice(0,28)}…</span>`:'',
+  ].join('');
+  document.getElementById('back-proj-btn').onclick=()=>showProject(currentProject.id);
+  renderSecGrid();
+  updateProgress();
+  document.getElementById('work-panel').classList.remove('visible');
+  document.getElementById('schedule-panel').style.display='none';
+  updateSheetsStatusAll();
+  showScreen('course');
+}
+
+/* ══════════════════════════════════════════════════════
+   PROJECTS
+══════════════════════════════════════════════════════ */
+function renderProjects(){
+  const grid = document.getElementById('projects-grid');
+  grid.innerHTML = '';
+  projects.forEach(p=>{
+    const card=document.createElement('div');
+    card.className='project-card';
+    card.innerHTML=`<div class="pc-stripe"></div><div class="pc-icon">📂</div><h3>${p.name}</h3><div class="pc-url">${p.url}</div><div class="pc-foot"><span class="pc-date">${new Date(p.created).toLocaleDateString('es-CR')}</span><button class="del-btn" onclick="event.stopPropagation();delProject('${p.id}')" title="Eliminar">✕</button></div>`;
+    card.addEventListener('click',()=>showProject(p.id));
+    grid.appendChild(card);
+  });
+  const add=document.createElement('div');
+  add.className='add-card';
+  add.innerHTML='<div class="plus">+</div><span>Agregar proyecto</span>';
+  add.onclick=()=>document.getElementById('modal-add').classList.add('active');
+  grid.appendChild(add);
+}
+function createProject(){
+  const name=document.getElementById('in-name').value.trim();
+  const url=document.getElementById('in-url').value.trim();
+  if(!name||!url){toast('Completa ambos campos','error');return;}
+  if(!extractSheetId(url)){toast('URL inválida de Google Sheets','error');return;}
+  const id=Date.now().toString();
+  projects.push({id,name,url,sheetId:extractSheetId(url),created:Date.now()});
+  localStorage.setItem('dcd_projects',JSON.stringify(projects));
+  closeModal();
+  document.getElementById('in-name').value='';
+  document.getElementById('in-url').value='';
+  renderProjects();
+  toast(`✓ Proyecto "${name}" creado`,'success');
+  setTimeout(()=>showProject(id),350);
+}
+function delProject(id){
+  if(!confirm('¿Eliminar este proyecto?')) return;
+  projects=projects.filter(p=>p.id!==id);
+  localStorage.setItem('dcd_projects',JSON.stringify(projects));
+  renderProjects();
+  toast('Proyecto eliminado','');
+}
+function closeModal(){ document.getElementById('modal-add').classList.remove('active'); }
+
+/* ══════════════════════════════════════════════════════
+   LOAD COURSES
+══════════════════════════════════════════════════════ */
+async function loadCourses(){
+  const cont=document.getElementById('courses-container');
+  cont.innerHTML=`<div class="loading-state"><div class="spinner"></div><p>Conectando con Google Sheets…</p></div>`;
+  document.getElementById('config-hint').style.display='none';
+  document.getElementById('period-tabs').innerHTML='';
+  try{
+    allCourses=await fetchBase(currentProject.url);
+    if(!allCourses.length){cont.innerHTML=`<div class="err-card">No se encontraron cursos en la hoja "Base". Verifica el nombre.</div>`;return;}
+    document.getElementById('course-count').textContent=`${allCourses.length} cursos encontrados`;
+    const periods=[...new Set(allCourses.map(c=>c['Periodo']||c['Ubicación']||'?'))].sort();
+    renderPeriodTabs(periods);
+    renderTable(allCourses);
+  }catch(err){
+    document.getElementById('config-hint').style.display='block';
+    cont.innerHTML=`<div class="err-card">⚠️ ${err.message}</div>`;
+    document.getElementById('course-count').textContent='Error';
+  }
+}
+function renderPeriodTabs(periods){
+  const tabs=document.getElementById('period-tabs');
+  tabs.innerHTML=`<button class="ptab active" onclick="filterP('all',this)">Todos</button>`;
+  periods.forEach(p=>{
+    const b=document.createElement('button');
+    b.className='ptab';b.textContent=`Período ${p}`;
+    b.onclick=function(){filterP(p,this);};
+    tabs.appendChild(b);
+  });
+}
+function filterP(period,btn){
+  document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable(period==='all'?allCourses:allCourses.filter(c=>(c['Periodo']||c['Ubicación'])===period));
+}
+function renderTable(courses){
+  const cont=document.getElementById('courses-container');
+  const sid=currentProject.sheetId;
+  const wrap=document.createElement('div');wrap.className='ct-wrap';
+  const table=document.createElement('table');table.className='ctable';
+  table.innerHTML=`<thead><tr><th>Código</th><th>Nombre del curso</th><th>Créditos</th><th>Período</th><th>Estado</th><th></th></tr></thead>`;
+  const tbody=document.createElement('tbody');
+  courses.forEach(c=>{
+    const code=c['Código']||'';
+    const saved=maestroData[sid]?.[code]||{};
+    const filled=ALL_SECS.filter(s=>saved[s.id]?.trim()).length;
+    const pct=Math.round(filled/ALL_SECS.length*100);
+    let badge=pct===0?`<span class="badge b-empty">Pendiente</span>`:pct<100?`<span class="badge b-partial">${pct}% completado</span>`:`<span class="badge b-done">✓ Completo</span>`;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="td-code">${code}</td><td class="td-name">${c['Curso']||c['Nombre']||''}</td><td class="td-m">${c['Créditos']||''}</td><td class="td-m">${c['Periodo']||c['Ubicación']||''}</td><td>${badge}</td><td><button class="work-btn">Trabajar →</button></td>`;
+    tr.querySelector('.work-btn').onclick=e=>{e.stopPropagation();showCourseWork(c);};
+    tr.onclick=()=>showCourseWork(c);
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);wrap.appendChild(table);
+  cont.innerHTML='';cont.appendChild(wrap);
+}
+async function syncSheets(){
+  document.getElementById('sync-btn').textContent='Sincronizando…';
+  await loadCourses();
+  document.getElementById('sync-btn').textContent='⟳ Sincronizar';
+  toast('✓ Actualizado','success');
+}
+
+/* ══════════════════════════════════════════════════════
+   SECTION GRID
+══════════════════════════════════════════════════════ */
+function renderSecGrid(){
+  const grid=document.getElementById('sec-grid');
+  const sid=currentProject.sheetId;
+  const code=currentCourse?.['Código']||'';
+  const saved=maestroData[sid]?.[code]||{};
+  grid.innerHTML='';
+  CATS.forEach(cat=>{
+    const div=document.createElement('div');div.className='sec-cat';
+    div.innerHTML=`<div class="sec-cat-lbl">${cat.label}</div><div class="sec-pills"></div>`;
+    const pills=div.querySelector('.sec-pills');
+    cat.secs.forEach(sec=>{
+      const hasData=!!(saved[sec.id]?.trim());
+      const pill=document.createElement('button');
+      pill.className=`spill${hasData?' has-data':''}${currentSection?.id===sec.id?' active':''}`;
+      pill.innerHTML=`<span class="pico">${sec.icon}</span><span>${sec.label}</span>${hasData?'<span class="pck">✓</span>':''}`;
+      pill.addEventListener('click',()=>openSection(sec,pill));
+      pills.appendChild(pill);
+    });
+    grid.appendChild(div);
+  });
+}
+
+function openSection(sec,pillEl){
+  currentSection=sec;
+  document.querySelectorAll('.spill').forEach(p=>p.classList.remove('active'));
+  if(pillEl) pillEl.classList.add('active');
+
+  if(sec.isSchedule){
+    document.getElementById('work-panel').classList.remove('visible');
+    document.getElementById('schedule-panel').style.display='block';
+    buildSchedule();
+    setTimeout(()=>document.getElementById('schedule-panel').scrollIntoView({behavior:'smooth',block:'start'}),50);
+    return;
+  }
+  document.getElementById('schedule-panel').style.display='none';
+
+  const sid=currentProject.sheetId;
+  const code=currentCourse?.['Código']||'';
+  const saved=maestroData[sid]?.[code]||{};
+
+  document.getElementById('wp-ico').textContent=sec.icon;
+  document.getElementById('wp-ico').style.background='rgba(45,106,79,0.1)';
+  document.getElementById('wp-title').textContent=sec.label;
+  document.getElementById('wp-sub').textContent=CATS.find(c=>c.secs.includes(sec))?.label||'';
+  document.getElementById('result-ta').value=saved[sec.id]||'';
+
+  const prompt=buildPrompt(sec.pkey,currentCourse,saved,sec.id);
+  const box=document.getElementById('prompt-box');
+  const esc=prompt.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  box.innerHTML=esc.replace(/\[([^\]]+)\]/g,'<span class="ph">[$1]</span>');
+
+  // Related
+  const strip=document.getElementById('rel-strip');
+  const chips=document.getElementById('rel-chips');
+  if(sec.related?.length){
+    chips.innerHTML='';
+    sec.related.forEach(rid=>{
+      const rs=ALL_SECS.find(s=>s.id===rid);if(!rs)return;
+      const val=saved[rid];
+      const chip=document.createElement('span');chip.className='rel-chip';
+      chip.textContent=`${rs.icon} ${rs.label}: ${val?(val.slice(0,36)+(val.length>36?'…':'')):'(pendiente)'}`;
+      chip.title=val||'Sin datos aún';
+      chips.appendChild(chip);
+    });
+    strip.style.display='flex';
+  } else strip.style.display='none';
+
+  const panel=document.getElementById('work-panel');
+  panel.classList.add('visible');
+  setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'start'}),50);
+}
+
+/* ══════════════════════════════════════════════════════
+   SAVE LOCAL
+══════════════════════════════════════════════════════ */
+function saveSection(){
+  if(!currentSection||!currentCourse||!currentProject)return;
+  const val=document.getElementById('result-ta').value.trim();
+  if(!val){toast('Pega el resultado primero','error');return;}
+  const sid=currentProject.sheetId;
+  const code=currentCourse['Código']||'';
+  if(!maestroData[sid])maestroData[sid]={};
+  if(!maestroData[sid][code])maestroData[sid][code]={};
+  maestroData[sid][code][currentSection.id]=val;
+  localStorage.setItem('dcd_maestro',JSON.stringify(maestroData));
+  renderSecGrid();
+  updateProgress();
+  const lbl=document.getElementById('save-lbl');
+  lbl.classList.add('show');
+  setTimeout(()=>lbl.classList.remove('show'),2500);
+  toast(`✓ "${currentSection.label}" guardado localmente`,'success');
+}
+
+function updateProgress(){
+  const sid=currentProject?.sheetId;
+  const code=currentCourse?.['Código']||'';
+  const saved=maestroData[sid]?.[code]||{};
+  const filled=ALL_SECS.filter(s=>saved[s.id]?.trim()).length;
+  const total=ALL_SECS.length;
+  const pct=Math.round(filled/total*100);
+  document.getElementById('prog-bar').style.width=pct+'%';
+  document.getElementById('prog-lbl').textContent=`${filled} de ${total} secciones completadas (${pct}%)`;
+}
+
+/* ══════════════════════════════════════════════════════
+   PUSH TO MAESTRO (Google Sheets API write)
+══════════════════════════════════════════════════════ */
+async function pushToMaestro(){
+  const sid=currentProject?.sheetId;
+  const code=currentCourse?.['Código']||'';
+  const saved=maestroData[sid]?.[code]||{};
+
+  if(!Object.keys(saved).length){toast('No hay datos guardados para este curso','error');return;}
+
+  if(!gAccessToken){
+    toast('Inicia sesión con Google primero para escribir en Sheets','error');
+    return;
+  }
+
+  const btn=document.getElementById('push-btn');
+  btn.textContent='Guardando…';btn.disabled=true;
+
+  // Build column map: Maestro column header → value
+  const colMap={};
+
+  // Regular sections
+  ALL_SECS.forEach(sec=>{
+    if(!sec.col||!saved[sec.id]) return;
+    colMap[sec.col]=saved[sec.id];
+  });
+
+  // Cronograma: parse stored JSON → individual columns
+  if(saved.cronograma){
+    try{
+      const sch=JSON.parse(saved.cronograma);
+      for(let s=1;s<=14;s++){
+        const d=sch[s]||{};
+        colMap[`Sesion_${s}`]=String(s);
+        if(d.mod) colMap[`Cronograma_Modulo_${s}`]=d.mod;
+        if(d.sub) colMap[`Cronograma_Subtema_${s}`]=d.sub;
+        if(s>=2&&d.note) colMap[`Actividades_EN_${s}`]=d.note;
+      }
+    }catch(e){}
+  }
+
+  try{
+    const sheetId=extractSheetId(currentProject.url);
+    await writeCourseToMaestro(sheetId,code,colMap);
+    toast(`✓ Curso "${code}" guardado en la hoja Maestro`,'success');
+  }catch(err){
+    toast('Error al guardar en Sheets: '+err.message,'error');
+  }
+
+  btn.textContent='↑ Guardar en Maestro';btn.disabled=false;
+}
+
+function copyPrompt(){
+  const text=document.getElementById('prompt-box').innerText;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn=document.getElementById('copy-btn');
+    btn.textContent='✓ Copiado';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='⎘ Copiar';btn.classList.remove('copied');},2000);
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   SCHEDULE BUILDER
+══════════════════════════════════════════════════════ */
+function buildSchedule(){
+  const sid=currentProject?.sheetId;
+  const code=currentCourse?.['Código']||'';
+  const saved=maestroData[sid]?.[code]||{};
+  const sch=JSON.parse(saved.cronograma||'{}');
+
+  const acts=[];
+  ['e1','e2','e3'].forEach(ek=>{if(saved[ek])acts.push(saved[ek].split('\n')[0].trim());});
+
+  const mods=[];
+  for(let i=1;i<=7;i++){
+    const k=`Modulo${i}`;
+    if(currentCourse?.[k]) mods.push({n:i,name:currentCourse[k]});
+  }
+  if(!mods.length) mods.push({n:1,name:'Módulo 1'});
+
+  const cont=document.getElementById('sch-rows');
+  cont.innerHTML='';
+
+  for(let s=1;s<=14;s++){
+    const d=sch[s]||{};
+    const row=document.createElement('div');row.className='sch-row';
+
+    const modOpts=mods.map(m=>`<option value="${m.n}" ${d.mod==m.n?'selected':''}>${m.name.slice(0,48)}</option>`).join('');
+    const actOpts=acts.map(a=>`<option value="${a}" ${d.actName===a?'selected':''}>${a.slice(0,34)}</option>`).join('');
+    const verbOpts=['Inicia','Continúa','Finaliza','Entrega','Realiza'].map(v=>`<option value="${v}" ${d.verb===v?'selected':''}>${v}</option>`).join('');
+
+    row.innerHTML=`
+      <div class="sch-sess">S${s}</div>
+      <div class="sch-drop">
+        <select id="sm${s}" class="sch-sel"><option value="">— Módulo —</option>${modOpts}</select>
+        <textarea id="ss${s}" class="sch-ta" placeholder="Subtemas de la sesión…" rows="2">${d.sub||''}</textarea>
+      </div>
+      <div class="sch-drop">
+        ${s>=2?`<select id="sa${s}" class="sch-sel"><option value="">— Actividad —</option>${actOpts}<option value="__study__">Estudio independiente</option></select>
+        <select id="sv${s}" class="sch-sel"><option value="">— Verbo —</option>${verbOpts}</select>`
+        :`<div style="font-size:11px;color:var(--ink4);padding-top:8px">Primera sesión — sin actividad</div>`}
+      </div>
+      <div>
+        <textarea id="sn${s}" class="sch-ta" placeholder="Texto para el cronograma…" rows="3">${d.note||''}</textarea>
+      </div>`;
+    cont.appendChild(row);
+
+    if(s>=2){
+      setTimeout(()=>{
+        const auto=()=>{
+          const a=document.getElementById(`sa${s}`)?.value;
+          const v=document.getElementById(`sv${s}`)?.value;
+          const n=document.getElementById(`sn${s}`);
+          if(a&&v&&n&&!n.value){
+            n.value=a==='__study__'
+              ?`Durante las horas de estudio independiente, el estudiante realiza las actividades según las indicaciones del docente.`
+              :`${a}: El estudiante ${v.toLowerCase()} el desarrollo de ${a.toLowerCase()} y consulta al docente ante cualquier duda. Durante las horas de estudio independiente, el estudiante realiza las actividades según las indicaciones del docente.`;
+          }
+        };
+        document.getElementById(`sa${s}`)?.addEventListener('change',auto);
+        document.getElementById(`sv${s}`)?.addEventListener('change',auto);
+      },80);
+    }
+  }
+}
+
+function saveSchedule(){
+  const data={};
+  for(let s=1;s<=14;s++){
+    data[s]={
+      mod:document.getElementById(`sm${s}`)?.value||'',
+      sub:document.getElementById(`ss${s}`)?.value||'',
+      actName:document.getElementById(`sa${s}`)?.value||'',
+      verb:document.getElementById(`sv${s}`)?.value||'',
+      note:document.getElementById(`sn${s}`)?.value||''
+    };
+  }
+  const sid=currentProject?.sheetId;
+  const code=currentCourse?.['Código']||'';
+  if(!maestroData[sid])maestroData[sid]={};
+  if(!maestroData[sid][code])maestroData[sid][code]={};
+  maestroData[sid][code].cronograma=JSON.stringify(data);
+  localStorage.setItem('dcd_maestro',JSON.stringify(maestroData));
+  renderSecGrid();updateProgress();
+  toast('✓ Cronograma guardado','success');
+}
+
+function clearSchedule(){
+  for(let s=1;s<=14;s++){
+    ['sm','ss','sa','sv','sn'].forEach(p=>{
+      const el=document.getElementById(`${p}${s}`);
+      if(el){if(el.nodeName==='SELECT')el.value='';else el.value='';}
+    });
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════════════ */
+function toast(msg,type=''){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.className=`toast${type?' t-'+type:''} show`;
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>el.classList.remove('show'),3200);
+}
+
+/* ══════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════ */
+document.getElementById('modal-add').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+renderProjects();
+initGoogleAuth();
+</script>
+</body>
+</html>
