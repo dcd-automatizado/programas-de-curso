@@ -402,6 +402,10 @@ body::after{content:'';position:fixed;inset:0;background-image:url("data:image/s
     <div class="meta-row" id="ci-meta"></div>
     <div class="prog-track"><div class="prog-fill" id="prog-bar" style="width:0%"></div></div>
     <div class="prog-lbl" id="prog-lbl">0 secciones completadas</div>
+    <div style="margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div id="tematicas-preview" style="font-size:12px;color:var(--ink3);font-style:italic;max-width:680px;line-height:1.5"></div>
+      <button class="btn btn-ghost btn-sm" onclick="openTematicasEditor()" style="font-size:11px;white-space:nowrap;flex-shrink:0">✏️ Editar temáticas</button>
+    </div>
   </div>
 
   <!-- Ficha upload banner -->
@@ -498,6 +502,34 @@ body::after{content:'';position:fixed;inset:0;background-image:url("data:image/s
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+
+<!-- Modal: Temáticas editor -->
+<div class="overlay" id="modal-tematicas">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-ico">📋</div>
+    <h2>Editar oración de temáticas</h2>
+    <p>Esta oración se inserta automáticamente en la Descripción del curso al exportar al Maestro.</p>
+    <div class="fg">
+      <label>Las principales temáticas por abordar son…</label>
+      <textarea id="te-modulos" rows="3" style="width:100%;background:var(--cream);border:1.5px solid var(--border);border-radius:var(--rs);padding:11px 13px;font-family:var(--sans);font-size:13px;color:var(--ink2);resize:vertical;outline:none;line-height:1.6" placeholder="Generado automáticamente desde los módulos guardados…"></textarea>
+      <small>Un nombre por línea, en minúscula. Se unen con comas y "así como".</small>
+    </div>
+    <div class="fg">
+      <label>Las estrategias de evaluación son…</label>
+      <textarea id="te-evas" rows="2" style="width:100%;background:var(--cream);border:1.5px solid var(--border);border-radius:var(--rs);padding:11px 13px;font-family:var(--sans);font-size:13px;color:var(--ink2);resize:vertical;outline:none;line-height:1.6" placeholder="Generado automáticamente desde las evaluaciones guardadas…"></textarea>
+      <small>Un nombre por línea. Se unen con comas y "y".</small>
+    </div>
+    <div style="background:var(--cream2);border:1px solid var(--border);border-radius:var(--rs);padding:12px 14px;font-size:13px;color:var(--ink2);line-height:1.6;margin-bottom:4px">
+      <strong>Vista previa:</strong><br>
+      <span id="te-preview" style="font-style:italic;color:var(--ink3)"></span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="resetTematicas()">↺ Auto-generar</button>
+      <button class="btn btn-ghost" onclick="closeTematicasEditor()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveTematicas()">✓ Guardar</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal: Prompt editor -->
 <div class="overlay" id="modal-prompts">
@@ -1674,7 +1706,13 @@ function updateProgress(){
   const total=ALL_SECS.length;
   const pct=Math.round(filled/total*100);
   document.getElementById('prog-bar').style.width=pct+'%';
-  document.getElementById('prog-lbl').textContent=`${filled} de ${total} secciones completadas (${pct}%)`;
+  document.getElementById('prog-lbl').textContent=filled+' de '+total+' secciones completadas ('+pct+'%)';
+  // Show tematicas preview in hero
+  const prev=document.getElementById('tematicas-preview');
+  if(prev){
+    const sentence=buildTematicasSentence(saved);
+    prev.textContent=sentence||'';
+  }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1728,7 +1766,7 @@ function buildMaestroColMap(saved) {
   const tematicasSentence = buildTematicasSentence(saved);
 
   const descParts = [descObj, descImp, descCurso, tematicasSentence, descRasgos].filter(Boolean);
-  if (descParts.length) colMap['Descripción'] = descParts.join('\n\n');
+  if (descParts.length) colMap['Descripción'] = descParts.join('\n');
 
   // ── Competencia ───────────────────────────────────
   if (saved.competencia) colMap['Competencia'] = saved.competencia;
@@ -1801,47 +1839,53 @@ function buildMaestroColMap(saved) {
     } catch(e) {}
   }
 
+  // Sanitize all values: fix _NL_ artifacts, collapse multiple newlines
+  Object.keys(colMap).forEach(k => {
+    if (typeof colMap[k] === 'string') {
+      colMap[k] = colMap[k]
+        .replace(/_NL_/g, '\n')
+        .replace(/\r\n/g, '\n')
+        .replace(/\n{2,}/g, '\n');
+    }
+  });
+
   return colMap;
 }
 
 // ── Build "Las principales temáticas..." sentence ─────
 function buildTematicasSentence(saved) {
-  // Get module names
-  const mods = saved.modulos ? splitModulos(saved.modulos) : [];
-  // Get evaluation strategy names
-  const evaRows = parseEvaTablaText(saved.eva_tabla || '');
+  // Use manual override if set
+  if (saved._tematicas_override) {
+    const ov = saved._tematicas_override;
+    const modLines = (ov.mods||'').trim().split('\n').filter(Boolean);
+    const evaLines = (ov.evas||'').trim().split('\n').filter(Boolean);
+    let s = '';
+    if (modLines.length) s += 'Las principales temáticas por abordar son ' + listToSpanish(modLines) + '.';
+    if (evaLines.length) {
+      const el = evaLines.join(', ').replace(/,([^,]+)$/, ' y$1');
+      if (s) s += ' ';
+      s += 'Las estrategias de evaluación son ' + el + '.';
+    }
+    return s;
+  }
 
+  // Auto-generate from saved data
+  const mods = saved.modulos ? splitModulos(saved.modulos) : [];
+  const evaRows = parseEvaTablaText(saved.eva_tabla || '');
   if (!mods.length && !evaRows.length) return '';
 
   let sentence = '';
-
   if (mods.length) {
-    // Each module name: strip "Módulo N. " prefix, lowercase
-    const modNames = mods.map(m => {
-      const clean = m.name
-        .replace(/^(m[oó]dulo|module)\s+\d+[.:]?\s*/i, '') // remove "Módulo 1. "
-        .trim()
-        .toLowerCase();
-      return clean;
-    });
-
-    // Join with Oxford-style comma list
-    const modList = listToSpanish(modNames);
-    sentence += `Las principales temáticas por abordar son ${modList}.`;
+    const modNames = mods.map(m =>
+      m.name.replace(/^(m[oó]dulo|module)\s+\d+[.:]?\s*/i,'').trim().toLowerCase()
+    );
+    sentence += 'Las principales temáticas por abordar son ' + listToSpanish(modNames) + '.';
   }
-
   if (evaRows.length) {
-    const evaNames = evaRows.map(r => {
-      // Lowercase, add article if plural count
-      const n = r.name.toLowerCase();
-      return r.count > 1 ? `las ${n}` : `el ${n}`;
-    });
-    // Remove duplicate articles for cleanliness
-    const evaList = evaNames.join(', ').replace(/,([^,]+)$/, ' y$1');
-    if (sentence) sentence += ` Las estrategias de evaluación son ${evaList}.`;
-    else sentence = `Las estrategias de evaluación son ${evaList}.`;
+    const evaList = evaRows.map(r => r.name.toLowerCase()).join(', ').replace(/,([^,]+)$/, ' y$1');
+    if (sentence) sentence += ' ';
+    sentence += 'Las estrategias de evaluación son ' + evaList + '.';
   }
-
   return sentence;
 }
 
@@ -1926,6 +1970,23 @@ function copyPrompt(){
 /* ══════════════════════════════════════════════════════
    SCHEDULE BUILDER
 ══════════════════════════════════════════════════════ */
+// Returns "(X%)" label for Finaliza/Realiza verbs based on eva_tabla
+function getPctLabel(actName, verb) {
+  if (!['Finaliza','Realiza','Entrega'].includes(verb)) return '';
+  const sid = currentProject?.sheetId;
+  const code = currentCourse?.['Código']||'';
+  const saved = maestroData[sid]?.[code]||{};
+  const rows = parseEvaTablaText(saved.eva_tabla||'');
+  // Find matching row (name substring match)
+  const row = rows.find(r => actName.toLowerCase().includes(r.name.toLowerCase()) || r.name.toLowerCase().includes(actName.toLowerCase()));
+  if (!row) return '';
+  if (row.count > 1) {
+    const each = Math.round(row.pct / row.count);
+    return `(${each}%)`;
+  }
+  return `(${row.pct}%)`;
+}
+
 function buildSchedule(){
   const sid=currentProject?.sheetId;
   const code=currentCourse?.['Código']||'';
@@ -1983,32 +2044,34 @@ function buildSchedule(){
       </div>`;
     cont.appendChild(row);
 
-    if(s>=2){
-      setTimeout(()=>{
-        // Auto-fill subtemas when module is selected
-        const modSel=document.getElementById(`sm${s}`);
-        const subTA=document.getElementById(`ss${s}`);
-        if(modSel) modSel.addEventListener('change',function(){
-          const opt=this.options[this.selectedIndex];
-          const subs=opt?.dataset?.subs||'';
-          if(subs && subTA && !subTA.value) subTA.value=subs;
-        });
+    // Auto-fill for ALL sessions (s=1 gets modSel, s>=2 also gets activity)
+    setTimeout(()=>{
+      const modSel=document.getElementById('sm'+s);
+      const subTA=document.getElementById('ss'+s);
+      if(modSel) modSel.addEventListener('change',function(){
+        const opt=this.options[this.selectedIndex];
+        const subs=(opt&&opt.dataset&&opt.dataset.subs?opt.dataset.subs:'').replace(/_NL_/g,'\n');
+        if(subs && subTA && !subTA.value) subTA.value=subs;
+      });
 
-        // Auto-fill activity note when verb+activity selected
+      if(s>=2){
         const auto=()=>{
-          const a=document.getElementById(`sa${s}`)?.value;
-          const v=document.getElementById(`sv${s}`)?.value;
-          const n=document.getElementById(`sn${s}`);
-          if(a&&v&&n&&!n.value){
-            n.value=a==='__study__'
-              ?`Durante las horas de estudio independiente, el estudiante realiza las actividades según las indicaciones del docente.`
-              :`${a}: El estudiante ${v.toLowerCase()} el desarrollo de ${a.toLowerCase()} y consulta al docente ante cualquier duda.\nDurante las horas de estudio independiente, el estudiante realiza las actividades según las indicaciones del docente.`;
-          }
+          const a=document.getElementById('sa'+s)?document.getElementById('sa'+s).value:'';
+          const v=document.getElementById('sv'+s)?document.getElementById('sv'+s).value:'';
+          const n=document.getElementById('sn'+s);
+          if(!a||!v||!n||n.value) return;
+          const pctLabel=getPctLabel(a,v);
+          const actLabel=pctLabel?a+' '+pctLabel:a;
+          n.value=a==='__study__'
+            ?'Durante las horas de estudio independiente, el estudiante realiza las actividades según las indicaciones del docente.'
+            :actLabel+': El estudiante '+v.toLowerCase()+' el desarrollo de '+a.toLowerCase()+' y consulta al docente ante cualquier duda.\nDurante las horas de estudio independiente, el estudiante realiza las actividades según las indicaciones del docente.';
         };
-        document.getElementById(`sa${s}`)?.addEventListener('change',auto);
-        document.getElementById(`sv${s}`)?.addEventListener('change',auto);
-      },80);
-    }
+        const sa=document.getElementById('sa'+s);
+        const sv=document.getElementById('sv'+s);
+        if(sa) sa.addEventListener('change',auto);
+        if(sv) sv.addEventListener('change',auto);
+      }
+    },80);
   }
 }
 
@@ -2062,7 +2125,8 @@ function toast(msg,type=''){
 ══════════════════════════════════════════════════════ */
 document.getElementById('modal-add').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
 document.getElementById('modal-prompts').addEventListener('click',e=>{if(e.target===e.currentTarget)closePromptEditor();});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closePromptEditor();}});
+document.getElementById('modal-tematicas').addEventListener('click',e=>{if(e.target===e.currentTarget)closeTematicasEditor();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closePromptEditor();closeTematicasEditor();}});
 
 renderProjects();
 initGoogleAuth();
@@ -2192,7 +2256,7 @@ function parseFicha(text) {
     // Format for modulos section (one big text block)
     result.modulos = mods.map(m =>
       `${m.name}\n${m.subtemas.map(s => `- ${s}`).join('\n')}`
-    ).join('\n\n');
+    ).join('\n');
 
     // Also store individual module names for section pills
     mods.forEach((m, i) => {
@@ -2414,6 +2478,90 @@ function applyAllFicha() {
     if (!btn.disabled) applyFichaField(field.dataset.secId, btn);
   });
   toast('✓ Todos los datos de la ficha aplicados', 'success');
+}
+
+/* ══════════════════════════════════════════════════════
+   TEMÁTICAS EDITOR
+══════════════════════════════════════════════════════ */
+function openTematicasEditor() {
+  const sid = currentProject?.sheetId;
+  const code = currentCourse?.['Código']||'';
+  const saved = maestroData[sid]?.[code]||{};
+
+  // Populate from saved override or auto-generate
+  const override = saved._tematicas_override;
+  let modLines, evaLines;
+
+  if (override) {
+    modLines = override.mods || '';
+    evaLines = override.evas || '';
+  } else {
+    // Auto-generate from data
+    const mods = saved.modulos ? splitModulos(saved.modulos) : [];
+    modLines = mods.map(m => m.name.replace(/^(m[oó]dulo|module)\s+\d+[.:]?\s*/i,'').trim().toLowerCase()).join('\n');
+    const evaRows = parseEvaTablaText(saved.eva_tabla||'');
+    evaLines = evaRows.map(r => r.name.toLowerCase()).join('\n');
+  }
+
+  document.getElementById('te-modulos').value = modLines;
+  document.getElementById('te-evas').value = evaLines;
+  updateTematicasPreview();
+
+  document.getElementById('te-modulos').addEventListener('input', updateTematicasPreview);
+  document.getElementById('te-evas').addEventListener('input', updateTematicasPreview);
+
+  document.getElementById('modal-tematicas').classList.add('active');
+}
+
+function updateTematicasPreview() {
+  const modLines = document.getElementById('te-modulos').value.trim().split('\n').filter(Boolean);
+  const evaLines = document.getElementById('te-evas').value.trim().split('\n').filter(Boolean);
+  let preview = '';
+  if (modLines.length) preview += 'Las principales temáticas por abordar son ' + listToSpanish(modLines) + '.';
+  if (evaLines.length) {
+    const evaList = evaLines.join(', ').replace(/,([^,]+)$/, ' y$1');
+    if (preview) preview += ' ';
+    preview += 'Las estrategias de evaluación son ' + evaList + '.';
+  }
+  document.getElementById('te-preview').textContent = preview || '(vacío)';
+}
+
+function resetTematicas() {
+  const sid = currentProject?.sheetId;
+  const code = currentCourse?.['Código']||'';
+  const saved = maestroData[sid]?.[code]||{};
+  const mods = saved.modulos ? splitModulos(saved.modulos) : [];
+  document.getElementById('te-modulos').value = mods.map(m =>
+    m.name.replace(/^(m[oó]dulo|module)\s+\d+[.:]?\s*/i,'').trim().toLowerCase()
+  ).join('\n');
+  const evaRows = parseEvaTablaText(saved.eva_tabla||'');
+  document.getElementById('te-evas').value = evaRows.map(r => r.name.toLowerCase()).join('\n');
+  updateTematicasPreview();
+}
+
+function saveTematicas() {
+  const sid = currentProject?.sheetId;
+  const code = currentCourse?.['Código']||'';
+  if (!maestroData[sid]) maestroData[sid] = {};
+  if (!maestroData[sid][code]) maestroData[sid][code] = {};
+  maestroData[sid][code]._tematicas_override = {
+    mods: document.getElementById('te-modulos').value.trim(),
+    evas: document.getElementById('te-evas').value.trim()
+  };
+  localStorage.setItem('dcd_maestro', JSON.stringify(maestroData));
+  autoBackup();
+  closeTematicasEditor();
+  updateProgress(); // refresh preview in hero
+  toast('✓ Oración de temáticas guardada', 'success');
+}
+
+function closeTematicasEditor() {
+  document.getElementById('modal-tematicas').classList.remove('active');
+  // Remove listeners to avoid duplicates
+  const m = document.getElementById('te-modulos');
+  const e = document.getElementById('te-evas');
+  m.replaceWith(m.cloneNode(true));
+  e.replaceWith(e.cloneNode(true));
 }
 
 function closeFicha() {
