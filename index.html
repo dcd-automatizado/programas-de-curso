@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revisor DCD · CENFOTEC</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #164a98; --blue: #006aea; --light-blue: #9cc8ff;
+  --bg: #f0f4fb; --white: #fff; --border: #e2e8f0;
+  --text: #1a1a2e; --muted: #64748b; --faint: #f7f9ff;
+  --green: #16a34a; --red: #dc2626; --amber: #d97706;
+  --radius: 12px; --shadow: 0 1px 4px rgba(22,74,152,0.08), 0 4px 16px rgba(22,74,152,0.05);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ── Top bar ── */
+.topbar{background:var(--navy);padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.tb-left{display:flex;align-items:center;gap:11px;}
+.tb-icon{width:30px;height:30px;background:var(--blue);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tb-title{color:#fff;font-size:14px;font-weight:600;}
+.tb-sub{color:var(--light-blue);font-size:11px;margin-top:1px;}
+.tb-right{display:flex;align-items:center;gap:8px;}
+.btn-cfg{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;transition:.15s;}
+.btn-cfg:hover{background:rgba(255,255,255,.2);}
+.pill-count{background:#fbbf24;color:#1a1a00;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:500;border:none;cursor:pointer;transition:.15s;}
+.btn-primary{background:var(--navy);color:#fff;}.btn-primary:hover{background:#1a56b0;}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}.btn-ghost:hover{background:#f0f4fb;color:var(--text);}
+.btn-blue{background:var(--blue);color:#fff;}.btn-blue:hover{background:#0058d4;}
+.btn-sm{padding:6px 12px;font-size:12.5px;}
+
+/* ── Main ── */
+.main{max-width:860px;margin:0 auto;padding:28px 20px 80px;}
+
+/* ── State boxes ── */
+.state-box{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:52px 24px;text-align:center;box-shadow:var(--shadow);}
+.state-box .sbi{font-size:38px;margin-bottom:12px;}
+.state-box h2{font-size:16px;font-weight:600;margin-bottom:6px;}
+.state-box p{font-size:13px;color:var(--muted);line-height:1.6;}
+.hidden{display:none!important;}
+
+/* ══════════════════════════════════════
+   TABLERO
+══════════════════════════════════════ */
+#screen-board{}
+.board-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.board-header h2{font-size:18px;font-weight:700;color:var(--navy);}
+.board-meta{font-size:13px;color:var(--muted);}
+.board-stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;}
+.bstat{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 18px;flex:1;min-width:110px;box-shadow:var(--shadow);}
+.bstat-n{font-size:22px;font-weight:700;color:var(--navy);display:block;letter-spacing:-0.5px;}
+.bstat-l{font-size:11px;color:var(--muted);font-weight:500;margin-top:2px;}
+
+/* Tabla tablero */
+.board-table{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);}
+.bt-head{display:grid;grid-template-columns:1fr 160px 100px 90px 110px;background:#f7f9ff;border-bottom:1px solid var(--border);padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);}
+.bt-row{display:grid;grid-template-columns:1fr 160px 100px 90px 110px;padding:12px 16px;border-bottom:1px solid var(--border);align-items:center;transition:.12s;}
+.bt-row:last-child{border-bottom:none;}
+.bt-row:hover{background:var(--faint);}
+.bt-name{font-size:13.5px;font-weight:500;color:var(--text);line-height:1.35;}
+.bt-name .bt-email{font-size:11px;color:var(--muted);font-weight:400;margin-top:2px;}
+.bt-school{font-size:12px;color:var(--muted);}
+.bt-date{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.bt-hours{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.bt-action{display:flex;justify-content:flex-end;}
+
+/* Escuela badge coloreada */
+.school-chip{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;}
+.sc-AE{background:#e8f5e9;color:#2e7d32;} .sc-CIB{background:#fce4ec;color:#b71c1c;}
+.sc-FUN{background:#e3f2fd;color:#1565c0;} .sc-SOFT{background:#f3e5f5;color:#6a1b9a;}
+.sc-SINF{background:#fff8e1;color:#f57f17;} .sc-SIND{background:#e0f2f1;color:#00695c;}
+.sc-SINT{background:#e8eaf6;color:#283593;} .sc-TI{background:#fbe9e7;color:#bf360c;}
+.sc-default{background:#eceff1;color:#37474f;}
+
+/* ══════════════════════════════════════
+   PANTALLA DE REVISIÓN
+══════════════════════════════════════ */
+#screen-review{}
+.review-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.review-back{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--navy);font-weight:500;cursor:pointer;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:7px 13px;transition:.15s;}
+.review-back:hover{background:var(--faint);}
+.review-back svg{flex-shrink:0;}
+.review-progress-wrap{display:flex;align-items:center;gap:10px;flex:1;max-width:320px;}
+.rp-bar-outer{flex:1;height:5px;background:var(--bg);border-radius:3px;overflow:hidden;}
+.rp-bar-inner{height:100%;background:linear-gradient(90deg,var(--navy),var(--blue));border-radius:3px;transition:width .4s;}
+.rp-label{font-size:12px;font-weight:600;color:var(--navy);white-space:nowrap;font-family:'JetBrains Mono',monospace;}
+
+/* Toggle modo */
+.mode-toggle{display:flex;background:var(--white);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.mode-btn{padding:7px 14px;font-size:12.5px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;transition:.15s;display:flex;align-items:center;gap:5px;}
+.mode-btn.active{background:var(--navy);color:#fff;}
+.mode-btn:hover:not(.active){background:var(--faint);color:var(--text);}
+
+/* ── FLASHCARD ── */
+.flash-course-header{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:14px;box-shadow:var(--shadow);display:flex;align-items:center;gap:14px;}
+.flash-course-name{font-size:15px;font-weight:600;color:var(--navy);line-height:1.3;flex:1;}
+.flash-code-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;text-align:center;flex-shrink:0;}
+.flash-code-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.flash-code-input{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--navy);background:transparent;border:none;outline:none;width:110px;text-align:center;margin-top:3px;}
+.flash-code-input:focus{border-bottom:1.5px solid var(--blue);}
+
+/* Tarjeta simple sin flip */
+.flash-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:26px 26px 20px;min-height:220px;display:flex;flex-direction:column;margin-bottom:14px;transition:border-color .2s;}
+.flash-card:focus-within{border-color:var(--blue);}
+.flash-field-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--blue);margin-bottom:10px;}
+.flash-edited-dot{display:inline-block;width:7px;height:7px;background:var(--amber);border-radius:50%;margin-left:6px;vertical-align:middle;}
+.flash-field-value{font-size:15px;color:var(--text);line-height:1.6;flex:1;overflow-y:auto;white-space:pre-wrap;word-break:break-word;outline:none;border-bottom:1.5px solid transparent;transition:border-color .15s;}
+.flash-field-value:focus{border-bottom-color:var(--blue);}
+.flash-field-value.empty{color:var(--muted);font-style:italic;font-size:13.5px;}
+.flash-field-meta{font-size:11px;color:var(--muted);margin-top:10px;display:flex;align-items:center;justify-content:space-between;font-family:'JetBrains Mono',monospace;}
+
+/* Nav flashcard */
+.flash-nav{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:16px;}
+.flash-nav-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--navy);transition:.15s;box-shadow:var(--shadow);}
+.flash-nav-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy);}
+.flash-nav-btn:disabled{opacity:.3;cursor:not-allowed;}
+.flash-field-counter{font-size:13px;font-weight:600;color:var(--navy);font-family:'JetBrains Mono',monospace;min-width:60px;text-align:center;}
+
+/* Flash actions */
+.flash-actions{display:flex;gap:10px;flex-wrap:wrap;}
+.edited-badge{font-size:12px;color:var(--amber);font-weight:500;display:none;align-items:center;gap:5px;margin-left:auto;}
+.edited-badge.show{display:flex;}
+
+/* ── MODO COMPLETO ── */
+#mode-full .card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px;}
+#mode-full .card-header{background:var(--navy);padding:18px 22px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+#mode-full .card-title{color:#fff;font-size:17px;font-weight:600;line-height:1.3;margin-top:6px;}
+#mode-full .card-meta{color:rgba(156,200,255,.7);font-size:11px;margin-top:5px;}
+#mode-full .code-box{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:8px 12px;text-align:center;flex-shrink:0;}
+#mode-full .code-lbl{font-size:10px;color:var(--light-blue);text-transform:uppercase;letter-spacing:.5px;}
+#mode-full .code-inp{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#fff;background:transparent;border:none;outline:none;width:120px;text-align:center;margin-top:3px;}
+#mode-full .code-inp:focus{border-bottom:1.5px solid var(--light-blue);}
+#mode-full .fields-wrap{padding:22px;}
+.sec-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--blue);margin:18px 0 10px;padding-bottom:6px;border-bottom:1.5px solid var(--bg);}
+.sec-title:first-child{margin-top:0;}
+.fields-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.fi{display:flex;flex-direction:column;gap:3px;}
+.fi.span2{grid-column:span 2;}
+.fi-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.fi-val{font-size:13.5px;color:var(--text);line-height:1.55;padding:8px 10px;background:var(--bg);border:1px solid transparent;border-radius:7px;cursor:text;min-height:36px;white-space:pre-wrap;word-break:break-word;transition:.15s;}
+.fi-val:focus{outline:none;background:#fff;border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,106,234,.09);}
+.fi-val.edited{border-color:var(--amber);background:#fffbeb;}
+.fi-val[data-empty="true"]{color:var(--muted);font-style:italic;font-size:13px;}
+.fi-copy{align-self:flex-start;font-size:11px;color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:4px;background:transparent;border:none;font-family:'DM Sans',sans-serif;transition:.1s;}
+.fi-copy:hover{background:var(--bg);color:var(--navy);}
+.fi-copy.ok{color:var(--green);}
+.card-footer{padding:14px 22px;border-top:1px solid var(--border);background:#fafbff;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+
+/* ── Done ── */
+.done-wrap{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:44px 24px;text-align:center;box-shadow:var(--shadow);}
+.done-wrap .done-icon{font-size:40px;margin-bottom:12px;}
+.done-wrap h2{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:6px;}
+.done-wrap p{font-size:13px;color:var(--muted);}
+.done-stats{display:flex;gap:12px;justify-content:center;margin:20px 0;flex-wrap:wrap;}
+.ds{background:var(--bg);border-radius:10px;padding:14px 20px;text-align:center;min-width:90px;}
+.ds-n{font-size:24px;font-weight:700;color:var(--navy);display:block;letter-spacing:-.5px;}
+.ds-l{font-size:11px;color:var(--muted);font-weight:500;margin-top:2px;}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;transition:transform .3s;z-index:999;pointer-events:none;white-space:nowrap;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.ok{background:var(--green);}.toast.err{background:var(--red);}.toast.warn{background:var(--amber);}
+
+/* ── Modal ── */
+.overlay{position:fixed;inset:0;background:rgba(10,15,40,.52);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:20px 16px;overflow-y:auto;}
+.overlay.open{display:flex;}
+.modal{background:#fff;border-radius:14px;width:100%;max-width:660px;box-shadow:0 20px 60px rgba(0,0,0,.22);animation:mIn .22s ease;}
+@keyframes mIn{from{opacity:0;transform:scale(.96) translateY(-8px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.modal-hd{background:var(--navy);border-radius:14px 14px 0 0;padding:17px 22px;display:flex;align-items:center;justify-content:space-between;}
+.modal-hd h2{color:#fff;font-size:15px;font-weight:600;}
+.modal-x{background:rgba(255,255,255,.1);border:none;color:#fff;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
+.modal-x:hover{background:rgba(255,255,255,.2);}
+.modal-body{padding:22px;max-height:68vh;overflow-y:auto;}
+.modal-body::-webkit-scrollbar{width:4px;}.modal-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.modal-ft{padding:13px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;}
+.cfg-sec{margin-bottom:22px;}
+.cfg-sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--blue);margin-bottom:12px;padding-bottom:6px;border-bottom:1.5px solid var(--bg);}
+.cfg-f{margin-bottom:11px;}
+.cfg-f label{display:block;font-size:12.5px;font-weight:500;color:var(--muted);margin-bottom:4px;}
+.cfg-f input,.cfg-f select{width:100%;height:36px;padding:0 10px;border:1px solid var(--border);border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);background:#fff;outline:none;transition:.15s;}
+.cfg-f input:focus,.cfg-f select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,106,234,.08);}
+.cfg-f .hint{font-size:11px;color:var(--muted);margin-top:3px;font-family:'JetBrains Mono',monospace;}
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.em-block{margin-bottom:14px;}
+.em-block-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.em-lbl{font-size:12px;font-weight:600;color:var(--navy);background:#eef2fb;border-radius:6px;padding:4px 10px;display:inline-block;}
+.em-add{background:transparent;border:1px dashed var(--blue);color:var(--blue);border-radius:6px;padding:3px 10px;font-size:11.5px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:.15s;}
+.em-add:hover{background:rgba(0,106,234,.06);}
+.em-email-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.em-email-row input{flex:1;height:34px;padding:0 10px;border:1px solid var(--border);border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);background:#fff;outline:none;transition:.15s;}
+.em-email-row input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,106,234,.08);}
+.em-remove{background:transparent;border:none;color:var(--muted);cursor:pointer;width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;transition:.15s;}
+.em-remove:hover{background:#fef2f2;color:var(--red);}
+.map-row{display:grid;grid-template-columns:1fr 16px 1fr;gap:6px;align-items:center;margin-bottom:7px;}
+.map-arrow{color:var(--blue);font-size:13px;text-align:center;}
+.map-row select{font-family:'DM Sans',sans-serif;font-size:11.5px;}
+
+/* Spinner */
+.spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;flex-shrink:0;}
+@keyframes sp{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="tb-left">
+    <div class="tb-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 6C3 4.9 3.9 4 5 4h14c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H5a2 2 0 01-2-2V6z" stroke="white" stroke-width="1.5"/><path d="M3 8.5h18M7.5 4v5" stroke="white" stroke-width="1.5" stroke-linecap="round"/><path d="M7 13h3M7 16.5h6" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+    <div><div class="tb-title">Revisor de Programas DCD</div><div class="tb-sub">Universidad CENFOTEC</div></div>
+  </div>
+  <div class="tb-right">
+    <span class="pill-count hidden" id="badge">0</span>
+    <button class="btn-cfg" onclick="openCfg()">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="white" stroke-width="1.3"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.4 3.4l1.06 1.06M11.54 11.54l1.06 1.06M3.4 12.6l1.06-1.06M11.54 4.46l1.06-1.06" stroke="white" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Configuración
+    </button>
+  </div>
+</div>
+
+<div class="main" id="app">
+  <!-- Setup -->
+  <div class="state-box" id="s-setup">
+    <div class="sbi">⚙️</div>
+    <h2>Configuración requerida</h2>
+    <p>Completa la configuración para comenzar.<br>Solo necesitás hacerlo una vez.</p>
+    <br><button class="btn btn-primary" onclick="openCfg()" style="margin:0 auto;">Abrir configuración</button>
+  </div>
+  <!-- Loading -->
+  <div class="state-box hidden" id="s-load">
+    <div class="sbi">⏳</div>
+    <h2>Cargando...</h2>
+    <p id="load-msg">Conectando con Google Sheets...</p>
+  </div>
+  <!-- Empty -->
+  <div class="state-box hidden" id="s-empty">
+    <div class="sbi">✅</div>
+    <h2>¡Todo al día!</h2>
+    <p>No hay programas de curso pendientes de revisión.</p>
+    <br><button class="btn btn-ghost" onclick="reloadApp()" style="margin:0 auto;font-size:13px;">Recargar</button>
+  </div>
+
+  <!-- TABLERO -->
+  <div class="hidden" id="s-board">
+    <div class="board-header">
+      <div><h2>Tablero de revisión</h2><div class="board-meta" id="board-meta"></div></div>
+      <button class="btn btn-ghost btn-sm" onclick="reloadApp()">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 8a6 6 0 106-6H5M2 5v3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Recargar
+      </button>
+    </div>
+    <div class="board-stats">
+      <div class="bstat"><span class="bstat-n" id="bs-total">0</span><div class="bstat-l">Pendientes</div></div>
+      <div class="bstat"><span class="bstat-n" id="bs-schools">0</span><div class="bstat-l">Escuelas</div></div>
+      <div class="bstat"><span class="bstat-n" id="bs-today">0</span><div class="bstat-l">Enviados hoy</div></div>
+    </div>
+    <div class="board-table">
+      <div class="bt-head">
+        <div>Nombre del curso</div><div>Escuela</div><div>Horas</div><div>Fecha</div><div></div>
+      </div>
+      <div id="board-rows"></div>
+    </div>
+  </div>
+
+  <!-- REVISIÓN -->
+  <div class="hidden" id="s-review">
+    <div class="review-topbar">
+      <div class="review-back" onclick="goBoard()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Tablero
+      </div>
+      <div class="review-progress-wrap">
+        <div class="rp-bar-outer"><div class="rp-bar-inner" id="rp-bar" style="width:0%"></div></div>
+        <span class="rp-label" id="rp-label">0/0</span>
+      </div>
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="btn-flash" onclick="setMode('flash')">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M6 8h4M8 6v4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          Flashcard
+        </button>
+        <button class="mode-btn" id="btn-full" onclick="setMode('full')">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          Completo
+        </button>
+      </div>
+    </div>
+
+    <!-- FLASHCARD MODE -->
+    <div id="mode-flash">
+      <div class="flash-course-header" id="flash-header"></div>
+      <div class="flash-card" id="flash-card">
+        <div class="flash-field-label" id="ff-label"></div>
+        <div class="flash-field-value" id="ff-value" contenteditable="true" spellcheck="false"></div>
+        <div class="flash-field-meta">
+          <span id="ff-copyBtn" style="cursor:pointer;color:var(--blue);font-size:11px;" onclick="copyFlashField()">Copiar campo</span>
+          <span id="ff-num"></span>
+        </div>
+      </div>
+      <div class="flash-nav">
+        <button class="flash-nav-btn" id="fn-prev" onclick="flashPrev()">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <span class="flash-field-counter" id="fn-counter">1 / 1</span>
+        <button class="flash-nav-btn" id="fn-next" onclick="flashNext()">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="flash-actions">
+        <button class="btn btn-primary" id="fl-approve" onclick="doApprove()">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8l4 4 8-8" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Aprobar
+        </button>
+        <button class="btn btn-ghost" onclick="doSkip()">Omitir</button>
+        <span class="edited-badge" id="fl-edited">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#d97706" stroke-width="1.3"/><path d="M8 5v4M8 11v.5" stroke="#d97706" stroke-width="1.3" stroke-linecap="round"/></svg>
+          Editado
+        </span>
+        <button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="copyAllFlash()">Copiar todo</button>
+      </div>
+    </div>
+
+    <!-- FULL MODE -->
+    <div id="mode-full" class="hidden">
+      <div class="card">
+        <div class="card-header" id="full-header"></div>
+        <div class="fields-wrap" id="full-fields"></div>
+        <div class="card-footer">
+          <button class="btn btn-primary" id="fu-approve" onclick="doApprove()">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8l4 4 8-8" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Aprobar y pasar a Plantilla Maestra
+          </button>
+          <button class="btn btn-ghost" onclick="doSkip()">Omitir por ahora</button>
+          <span class="edited-badge" id="fu-edited">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#d97706" stroke-width="1.3"/><path d="M8 5v4M8 11v.5" stroke="#d97706" stroke-width="1.3" stroke-linecap="round"/></svg>
+            Campos editados
+          </span>
+          <button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="copyAllFull()">Copiar todo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Done dentro de revisión -->
+    <div class="hidden" id="s-done-inner">
+      <div class="done-wrap">
+        <div class="done-icon">🎉</div>
+        <h2>Sesión completada</h2>
+        <p>Revisaste todos los programas de esta sesión.</p>
+        <div class="done-stats">
+          <div class="ds"><span class="ds-n" id="d-app">0</span><div class="ds-l">Aprobados</div></div>
+          <div class="ds"><span class="ds-n" id="d-ski">0</span><div class="ds-l">Omitidos</div></div>
+          <div class="ds"><span class="ds-n" id="d-edi">0</span><div class="ds-l">Editados</div></div>
+        </div>
+        <button class="btn btn-primary" onclick="reloadApp()" style="margin:0 auto;">Ver tablero actualizado</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Config Modal -->
+<div class="overlay" id="cfg-overlay">
+  <div class="modal">
+    <div class="modal-hd">
+      <h2>⚙️ Configuración</h2>
+      <button class="modal-x" onclick="closeCfg()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="cfg-sec">
+        <div class="cfg-sec-title">Autenticación Google</div>
+        <div class="cfg-f"><label>OAuth Client ID</label>
+          <input type="text" id="cfg-cid" placeholder="xxxxxxxx.apps.googleusercontent.com">
+          <div class="hint">Google Cloud Console → Credenciales → OAuth 2.0</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+          <button class="btn btn-ghost btn-sm" onclick="doAuth()">Autenticar con Google</button>
+          <span id="auth-ok" style="font-size:12px;color:var(--muted);"></span>
+        </div>
+      </div>
+      <div class="cfg-sec">
+        <div class="cfg-sec-title">Google Sheets</div>
+        <div class="cfg-grid">
+          <div class="cfg-f"><label>URL Sheets de Respuestas</label>
+            <input type="text" id="cfg-rurl" placeholder="https://docs.google.com/spreadsheets/d/...">
+          </div>
+          <div class="cfg-f"><label>Nombre de la hoja</label>
+            <input type="text" id="cfg-rsheet" value="Creacion_Codigo">
+          </div>
+          <div class="cfg-f"><label>URL Plantilla Maestra</label>
+            <input type="text" id="cfg-murl" placeholder="https://docs.google.com/spreadsheets/d/...">
+          </div>
+          <div class="cfg-f"><label>Nombre de la hoja</label>
+            <input type="text" id="cfg-msheet" value="1.Cursos">
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+          <button class="btn btn-ghost btn-sm" onclick="validateSheets()">Validar conexión</button>
+          <span id="sheets-ok" style="font-size:12px;color:var(--muted);"></span>
+        </div>
+      </div>
+      <div class="cfg-sec">
+        <div class="cfg-sec-title">Correos por escuela</div>
+        <div id="em-container"></div>
+      </div>
+      <div class="cfg-sec">
+        <div class="cfg-sec-title">Mapeo de campos (Forms → Plantilla Maestra)</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Haz clic en "Validar conexión" para cargar los encabezados reales.</p>
+        <div id="map-container"></div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeCfg()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCfg()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://accounts.google.com/gsi/client"></script>
+<script>
+// ══ CONSTANTES ══════════════════════════════════════════════
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/gmail.send';
+const SCHOOLS = [
+  {name:'Administración de Empresas',prefix:'AE'},
+  {name:'Ciberseguridad',prefix:'CIB'},
+  {name:'Fundamentos de Computación',prefix:'FUN'},
+  {name:'Ingeniería del Software',prefix:'SOFT'},
+  {name:'Sistemas de Información',prefix:'SINF'},
+  {name:'Sistemas Industriales',prefix:'SIND'},
+  {name:'Sistemas Inteligentes',prefix:'SINT'},
+  {name:'Tecnologías de Información',prefix:'TI'},
+];
+const DEFAULT_MAPPING = [
+  {forms:'¿A cuál escuela pertenece?',maestra:'Escuela'},
+  {forms:'Ingrese el nombre del curso:',maestra:'Nombre del Curso\n(Nombre comercial)'},
+  {forms:'Moneda del curso',maestra:'Moneda'},
+  {forms:'Horas lectivas del curso',maestra:'Núm. Horas Clase'},
+  {forms:'Descripción del curso',maestra:'Descripción Larga'},
+  {forms:'Nivel de complejidad',maestra:'Nivel de Complejidad'},
+  {forms:'¿Qué conocimiento requiere el estudiante para llevar este curso?',maestra:'Perfil de Ingreso (Conocimiento Necesario)'},
+  {forms:'Código(s) del requisito(s) indispensable(s)',maestra:'Requisitos indispensables'},
+  {forms:'Código(s) del requisito(s) deseable(s)',maestra:'Requisitos Deseables'},
+  {forms:'Software requerido en el curso',maestra:'Requerimientos de Software (Estudiante - Docente - TIC)'},
+  {forms:'Especificaciones del equipo tecnológico.',maestra:'Requerimientos de Equipo\n(Para el estudiante)'},
+  {forms:'Roles que podrá desempeñar (SEPARADOS POR COMAS)',maestra:'Perfil de Salida - Roles - Actividades a realizar.\n(SEPARADAS POR COMAS)'},
+  {forms:'Palabras clave (SEPARADAS POR COMAS)',maestra:'Palabras Clave (SEPARADAS POR COMA)'},
+  {forms:'Contenidos principales. (Separados por coma)',maestra:'Contenidos'},
+  {forms:'¿El curso tiene certificación?',maestra:'Casa Certificadora'},
+  {forms:'Ingrese el nombre de la casa certificadora',maestra:'Nombre de la certificación'},
+  {forms:'Ingrese el enlace de la certificación',maestra:'Enlace a Certificación'},
+];
+const FIELD_SECTIONS = [
+  {title:'Información general',fields:['¿A cuál escuela pertenece?','Ingrese el nombre del curso:','Moneda del curso','Horas lectivas del curso','Ingrese las horas que desea colocar en el microcurso','Nivel de complejidad']},
+  {title:'Descripción y contenidos',fields:['Descripción del curso','Contenidos principales. (Separados por coma)']},
+  {title:'Requisitos',fields:['¿Qué conocimiento requiere el estudiante para llevar este curso?','Código(s) del requisito(s) indispensable(s)','Especificar 1','Código(s) del requisito(s) deseable(s)','Especificar']},
+  {title:'Tecnología y equipo',fields:['Software requerido en el curso','Especificar 2','Especificaciones del equipo tecnológico.','Especificar 3']},
+  {title:'Perfil de salida',fields:['Roles que podrá desempeñar (SEPARADOS POR COMAS)','Palabras clave (SEPARADAS POR COMAS)']},
+  {title:'Certificación',fields:['¿El curso tiene certificación?','Ingrese el nombre de la casa certificadora','Ingrese el enlace de la certificación']},
+  {title:'Metadatos',fields:['¿Desea que la dirección de Desarrollo Curricular y Docente asigne el código?','En el siguiente espacio, asigne el código del curso que desea crear.','Adjunte el programa de curso','Email Address','Timestamp']},
+];
+
+// ══ ESTADO ══════════════════════════════════════════════════
+let cfg={}, token=null, pending=[], reviewQueue=[], reviewIdx=0;
+let formsHdrs=[], maestraHdrs=[], lastCodes={};
+let edits={}, currentMode='flash', flashIdx=0, flashFlipped=false;
+let session={approved:0,skipped:0,edited:0};
+let currentRowData=null, currentProposedCode='';
+
+// ══ INIT ════════════════════════════════════════════════════
+window.onload=()=>{
+  loadCfg();
+  if(cfg.clientId && cfg.responsesUrl && cfg.maestraUrl){showS('s-load');initApp();}
+  else showS('s-setup');
+};
+
+function loadCfg(){
+  const s=localStorage.getItem('dcd_cfg2');
+  cfg=s?JSON.parse(s):{clientId:'',responsesUrl:'',responsesSheet:'Creacion_Codigo',maestraUrl:'',maestraSheet:'1.Cursos',schoolEmails:{},mapping:DEFAULT_MAPPING};
+}
+function saveCfgToStorage(){localStorage.setItem('dcd_cfg2',JSON.stringify(cfg));}
+
+async function initApp(){
+  try{
+    if(!token){setLoad('Autenticando...');await auth();}
+    setLoad('Cargando pendientes...');await loadPending();
+    setLoad('Cargando Plantilla Maestra...');await loadLastCodes();
+    if(pending.length===0){showS('s-empty');return;}
+    document.getElementById('badge').textContent=pending.length;
+    document.getElementById('badge').classList.remove('hidden');
+    renderBoard();
+    showS('s-board');
+  }catch(e){toast('Error: '+e.message,'err');showS('s-setup');console.error(e);}
+}
+
+function reloadApp(){edits={};session={approved:0,skipped:0,edited:0};showS('s-load');initApp();}
+
+// ══ AUTH ════════════════════════════════════════════════════
+async function auth(){
+  return new Promise((res,rej)=>{
+    google.accounts.oauth2.initTokenClient({
+      client_id:cfg.clientId,scope:SCOPES,
+      callback:(r)=>{if(r.error){rej(new Error(r.error));return;}token=r.access_token;res();}
+    }).requestAccessToken();
+  });
+}
+
+// ══ CARGAR DATOS ════════════════════════════════════════════
+async function loadPending(){
+  const sid=xSid(cfg.responsesUrl), sn=cfg.responsesSheet||'Creacion_Codigo';
+  const d=await sGet(sid,sn+'!A:ZZ');
+  const rows=d.values||[];
+  if(rows.length<2){pending=[];return;}
+  formsHdrs=rows[0];
+  const si=formsHdrs.indexOf('Incluido en Plantilla Maestra');
+  pending=rows.slice(1).map((r,i)=>{
+    const o={};formsHdrs.forEach((h,j)=>{o[h]=r[j]||'';});
+    o.__row=i+2;return o;
+  }).filter(r=>{
+    const v=(r['Incluido en Plantilla Maestra']||'').toString().trim().toLowerCase();
+    return v!=='true'&&v!=='1';
+  });
+}
+
+async function loadLastCodes(){
+  const sid=xSid(cfg.maestraUrl), sn=cfg.maestraSheet||'1.Cursos';
+  // Leer encabezados completos (fila 1 de todas las columnas)
+  const hdrs=await sGet(sid,sn+'!1:1');
+  maestraHdrs=(hdrs.values||[[]])[0]||[];
+  // Leer solo A:B para los últimos códigos por escuela
+  const d=await sGet(sid,sn+'!A:B');
+  const rows=(d.values||[]).slice(1);
+  lastCodes={};
+  rows.forEach(r=>{const e=(r[0]||'').trim(),c=(r[1]||'').trim();if(e&&c)lastCodes[e]=c;});
+}
+
+// ══ TABLERO ═════════════════════════════════════════════════
+function renderBoard(){
+  document.getElementById('bs-total').textContent=pending.length;
+  const schools=new Set(pending.map(r=>r['¿A cuál escuela pertenece?']||'')).size;
+  document.getElementById('bs-schools').textContent=schools;
+  const today=new Date().toDateString();
+  const todayCount=pending.filter(r=>{
+    try{return new Date(r['Timestamp']).toDateString()===today;}catch{return false;}
+  }).length;
+  document.getElementById('bs-today').textContent=todayCount;
+  document.getElementById('board-meta').textContent=`Última actualización: ${new Date().toLocaleTimeString('es-CR')}`;
+
+  const container=document.getElementById('board-rows');
+  container.innerHTML='';
+  pending.forEach((row,i)=>{
+    const escuela=row['¿A cuál escuela pertenece?']||'';
+    const school=SCHOOLS.find(s=>s.name.toLowerCase()===escuela.toLowerCase());
+    const prefix=school?school.prefix:'default';
+    const nombre=row['Ingrese el nombre del curso:']||'Sin nombre';
+    const horas=row['Horas lectivas del curso']||row['Ingrese las horas que desea colocar en el microcurso']||'—';
+    const ts=row['Timestamp'];
+    let fecha='—';
+    try{if(ts)fecha=new Date(ts).toLocaleDateString('es-CR',{day:'2-digit',month:'short'});}catch{}
+
+    const div=document.createElement('div');
+    div.className='bt-row';
+    div.innerHTML=`
+      <div class="bt-name">${nombre}<div class="bt-email">${row['Email Address']||''}</div></div>
+      <div class="bt-school"><span class="school-chip sc-${prefix}">${prefix}</span></div>
+      <div class="bt-hours">${horas}h</div>
+      <div class="bt-date">${fecha}</div>
+      <div class="bt-action"><button class="btn btn-primary btn-sm" onclick="startReview(${i})">Revisar</button></div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// ══ INICIAR REVISIÓN ════════════════════════════════════════
+function startReview(startIdx){
+  // Construir cola desde el índice seleccionado
+  reviewQueue=[];
+  for(let i=startIdx;i<pending.length;i++) reviewQueue.push(i);
+  reviewIdx=0;
+  edits={};
+  session={approved:0,skipped:0,edited:0};
+  showS('s-review');
+  document.getElementById('s-done-inner').classList.add('hidden');
+  document.getElementById('mode-flash').classList.remove('hidden');
+  document.getElementById('mode-full').classList.add('hidden');
+  loadReviewItem();
+}
+
+function goBoard(){showS('s-board');}
+
+function loadReviewItem(){
+  if(reviewIdx>=reviewQueue.length){showDone();return;}
+  const idx=reviewQueue[reviewIdx];
+  currentRowData=pending[idx];
+  currentProposedCode=proposeCode(currentRowData['¿A cuál escuela pertenece?']||'');
+  edits[reviewIdx]=edits[reviewIdx]||{};
+
+  // Progress
+  const pct=reviewQueue.length>0?(reviewIdx/reviewQueue.length)*100:0;
+  document.getElementById('rp-bar').style.width=pct+'%';
+  document.getElementById('rp-label').textContent=`${reviewIdx+1}/${reviewQueue.length}`;
+
+  flashIdx=0;flashFlipped=false;
+  renderFlash();
+  renderFull();
+}
+
+function proposeCode(escuela){
+  const s=SCHOOLS.find(x=>x.name.toLowerCase()===escuela.toLowerCase());
+  const pfx=s?s.prefix:escuela.substring(0,3).toUpperCase();
+  const last=lastCodes[escuela];
+  if(!last)return pfx+'-001';
+  const n=parseInt((last.split('-')[1]||'0'),10);
+  return pfx+'-'+String(n+1).padStart(3,'0');
+}
+
+// ══ FLASHCARD ═══════════════════════════════════════════════
+function getFlashFields(){
+  // Todos los campos del form excepto estado y timestamp internos
+  return formsHdrs.filter(h=>h!=='Incluido en Plantilla Maestra');
+}
+
+function renderFlash(){
+  const row=currentRowData;
+  const escuela=row['¿A cuál escuela pertenece?']||'';
+  const s=SCHOOLS.find(x=>x.name.toLowerCase()===escuela.toLowerCase());
+  const pfx=s?s.prefix:'?';
+  const nombre=row['Ingrese el nombre del curso:']||'Sin nombre';
+
+  document.getElementById('flash-header').innerHTML=`
+    <span class="school-chip sc-${pfx}" style="flex-shrink:0;">${pfx}</span>
+    <div class="flash-course-name">${nombre}</div>
+    <div class="flash-code-box">
+      <div class="flash-code-lbl">Código propuesto</div>
+      <input class="flash-code-input" id="flash-code" value="${currentProposedCode}" onclick="event.stopPropagation()">
+    </div>
+  `;
+  renderFlashField();
+  updateFlashEdited();
+}
+
+function renderFlashField(){
+  const fields=getFlashFields();
+  const field=fields[flashIdx];
+  const row=currentRowData;
+  const edited=edits[reviewIdx]&&edits[reviewIdx][field];
+  const val=edited?edited.newVal:(row[field]||'');
+
+  const hasEdit=!!(edits[reviewIdx]&&edits[reviewIdx][field]);
+  document.getElementById('ff-label').innerHTML=
+    field+(hasEdit?'<span class="flash-edited-dot"></span>':'');
+
+  const valEl=document.getElementById('ff-value');
+  valEl.dataset.field=field;
+  valEl.dataset.original=row[field]||'';
+
+  if(!val){
+    valEl.textContent='Sin información';
+    valEl.classList.add('empty');
+  }else{
+    valEl.textContent=val;
+    valEl.classList.remove('empty');
+  }
+
+  document.getElementById('ff-num').textContent=`${flashIdx+1} / ${fields.length}`;
+  document.getElementById('fn-counter').textContent=`${flashIdx+1} / ${fields.length}`;
+  document.getElementById('fn-prev').disabled=flashIdx===0;
+  document.getElementById('fn-next').disabled=flashIdx===fields.length-1;
+
+  // Limpiar y re-asignar listener de edición
+  const newValEl=valEl.cloneNode(true);
+  valEl.parentNode.replaceChild(newValEl,valEl);
+  newValEl.addEventListener('focus',()=>{
+    if(newValEl.classList.contains('empty')){newValEl.textContent='';newValEl.classList.remove('empty');}
+  });
+  newValEl.addEventListener('input',()=>{
+    const nv=newValEl.textContent.trim();
+    const orig=row[field]||'';
+    if(nv&&nv!==orig){
+      if(!edits[reviewIdx])edits[reviewIdx]={};
+      edits[reviewIdx][field]={newVal:nv,orig};
+    }else{
+      if(edits[reviewIdx])delete edits[reviewIdx][field];
+    }
+    const he=!!(edits[reviewIdx]&&edits[reviewIdx][field]);
+    document.getElementById('ff-label').innerHTML=field+(he?'<span class="flash-edited-dot"></span>':'');
+    updateFlashEdited();
+  });
+}
+
+function copyFlashField(){
+  const valEl=document.getElementById('ff-value');
+  if(!valEl)return;
+  navigator.clipboard.writeText(valEl.textContent).then(()=>{
+    const btn=document.getElementById('ff-copyBtn');
+    if(btn){btn.textContent='✓ Copiado';setTimeout(()=>{btn.textContent='Copiar campo';},1400);}
+  });
+}
+
+function updateFlashEdited(){
+  const hasEdits=Object.keys(edits[reviewIdx]||{}).length>0;
+  document.getElementById('fl-edited').classList.toggle('show',hasEdits);
+  document.getElementById('fu-edited').classList.toggle('show',hasEdits);
+}
+function flashPrev(){if(flashIdx>0){flashIdx--;renderFlashField();}}
+function flashNext(){const fl=getFlashFields();if(flashIdx<fl.length-1){flashIdx++;renderFlashField();}}
+
+// ══ MODO COMPLETO ═══════════════════════════════════════════
+function renderFull(){
+  const row=currentRowData;
+  const escuela=row['¿A cuál escuela pertenece?']||'';
+  const s=SCHOOLS.find(x=>x.name.toLowerCase()===escuela.toLowerCase());
+  const pfx=s?s.prefix:'?';
+
+  // Header
+  document.getElementById('full-header').innerHTML=`
+    <div style="flex:1;min-width:0;">
+      <span class="school-chip sc-${pfx}" style="margin-bottom:8px;display:inline-block;">${pfx}</span>
+      <div class="card-title">${row['Ingrese el nombre del curso:']||'Sin nombre'}</div>
+      <div class="card-meta">${row['Timestamp']?new Date(row['Timestamp']).toLocaleDateString('es-CR',{day:'2-digit',month:'short',year:'numeric'}):''} · ${row['Email Address']||''}</div>
+    </div>
+    <div class="code-box">
+      <div class="code-lbl">Código propuesto</div>
+      <input class="code-inp" id="full-code" value="${currentProposedCode}">
+    </div>
+  `;
+
+  // Fields
+  const wrap=document.getElementById('full-fields');
+  wrap.innerHTML='';
+  const assigned=new Set();
+
+  FIELD_SECTIONS.forEach(sec=>{
+    const sfs=sec.fields.filter(f=>formsHdrs.includes(f));
+    if(!sfs.length)return;
+    const t=document.createElement('div');t.className='sec-title';t.textContent=sec.title;wrap.appendChild(t);
+    const grid=document.createElement('div');grid.className='fields-grid';wrap.appendChild(grid);
+    sfs.forEach(fn=>{
+      assigned.add(fn);
+      const v=row[fn]||'';
+      const long=v.length>80;
+      const item=makeFI(fn,v,row);
+      if(long)item.classList.add('span2');
+      grid.appendChild(item);
+    });
+  });
+
+  const rem=formsHdrs.filter(f=>!assigned.has(f)&&f!=='Incluido en Plantilla Maestra');
+  if(rem.length){
+    const t=document.createElement('div');t.className='sec-title';t.textContent='Otros';wrap.appendChild(t);
+    const grid=document.createElement('div');grid.className='fields-grid';wrap.appendChild(grid);
+    rem.forEach(fn=>{
+      const v=row[fn]||'';
+      const item=makeFI(fn,v,row);
+      if(v.length>80)item.classList.add('span2');
+      grid.appendChild(item);
+    });
+  }
+}
+
+function makeFI(fn,val,row){
+  const item=document.createElement('div');item.className='fi';
+  const lbl=document.createElement('div');lbl.className='fi-label';lbl.textContent=fn;
+  const v=document.createElement('div');
+  v.className='fi-val';v.contentEditable='true';v.spellcheck=false;
+  v.dataset.field=fn;v.dataset.original=val;
+  if(!val){v.dataset.empty='true';v.textContent='Sin información';v.style.fontStyle='italic';v.style.color='var(--muted)';}
+  else v.textContent=val;
+  v.addEventListener('focus',()=>{if(v.dataset.empty==='true'){v.textContent='';delete v.dataset.empty;v.style.fontStyle='normal';v.style.color='var(--text)';}});
+  v.addEventListener('input',()=>{
+    const nv=v.textContent.trim();const orig=row[fn]||'';
+    if(nv!==orig&&nv){v.classList.add('edited');if(!edits[reviewIdx])edits[reviewIdx]={};edits[reviewIdx][fn]={newVal:nv,orig};}
+    else{v.classList.remove('edited');if(edits[reviewIdx])delete edits[reviewIdx][fn];}
+    updateFlashEdited();
+  });
+  const cpBtn=document.createElement('button');cpBtn.className='fi-copy';cpBtn.textContent='Copiar';
+  cpBtn.onclick=()=>navigator.clipboard.writeText(v.textContent).then(()=>{cpBtn.textContent='✓';cpBtn.classList.add('ok');setTimeout(()=>{cpBtn.textContent='Copiar';cpBtn.classList.remove('ok');},1400);});
+  item.appendChild(lbl);item.appendChild(v);item.appendChild(cpBtn);
+  return item;
+}
+
+// ══ MODO TOGGLE ═════════════════════════════════════════════
+function setMode(m){
+  currentMode=m;
+  document.getElementById('btn-flash').classList.toggle('active',m==='flash');
+  document.getElementById('btn-full').classList.toggle('active',m==='full');
+  document.getElementById('mode-flash').classList.toggle('hidden',m!=='flash');
+  document.getElementById('mode-full').classList.toggle('hidden',m!=='full');
+}
+
+// ══ APROBAR ═════════════════════════════════════════════════
+async function doApprove(){
+  const codeEl=document.getElementById(currentMode==='flash'?'flash-code':'full-code');
+  const code=(codeEl&&codeEl.value.trim())||currentProposedCode;
+  if(!code){toast('Ingresá un código','warn');return;}
+
+  const approveLabel='<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8l4 4 8-8" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Aprobar';
+  const btns=[document.getElementById('fl-approve'),document.getElementById('fu-approve')];
+  const setBtns=(disabled,html)=>btns.forEach(b=>{if(b){b.disabled=disabled;b.innerHTML=html;}});
+
+  setBtns(true,'<div class="spin"></div> Procesando...');
+
+  try{
+    // 1. Guardar ediciones en Sheets de respuestas
+    const rowEdits=edits[reviewIdx]||{};
+    if(Object.keys(rowEdits).length>0){
+      await saveEdits(currentRowData,rowEdits);
+      session.edited++;
+    }
+
+    // 2. Escribir en Plantilla Maestra
+    await writeToMaestra(currentRowData,code);
+
+    // 3. Marcar como TRUE en respuestas
+    await markDone(currentRowData.__row);
+
+    // 4. Correo — no-crítico: si falla se avisa pero no bloquea
+    const esc=currentRowData['¿A cuál escuela pertenece?']||'';
+    const emailVal=cfg.schoolEmails&&cfg.schoolEmails[esc];
+    if(emailVal){
+      try{
+        await sendMail(emailVal,code,currentRowData['Ingrese el nombre del curso:']||'',esc);
+      }catch(emailErr){
+        toast('Aprobado, pero el correo falló: '+emailErr.message,'warn');
+        console.warn('Email error:',emailErr);
+      }
+    }
+
+    lastCodes[esc]=code;
+    session.approved++;
+    toast('✓ Aprobado: '+code,'ok');
+    setBtns(false,approveLabel);
+    nextReview();
+
+  }catch(e){
+    toast('Error: '+e.message,'err');
+    console.error(e);
+    setBtns(false,approveLabel);
+  }
+}
+
+function doSkip(){session.skipped++;nextReview();}
+
+function nextReview(){
+  reviewIdx++;
+  if(reviewIdx>=reviewQueue.length){showDone();}
+  else{edits[reviewIdx]=edits[reviewIdx]||{};loadReviewItem();}
+}
+
+// ══ DONE ════════════════════════════════════════════════════
+function showDone(){
+  document.getElementById('d-app').textContent=session.approved;
+  document.getElementById('d-ski').textContent=session.skipped;
+  document.getElementById('d-edi').textContent=session.edited;
+  document.getElementById('mode-flash').classList.add('hidden');
+  document.getElementById('mode-full').classList.add('hidden');
+  document.getElementById('s-done-inner').classList.remove('hidden');
+}
+
+// ══ COPIAR TODO ═════════════════════════════════════════════
+function copyAllFlash(){
+  const fields=getFlashFields();const row=currentRowData;
+  let t=`CÓDIGO: ${document.getElementById('flash-code').value}\n\n`;
+  fields.forEach(f=>{const v=edits[reviewIdx]&&edits[reviewIdx][f]?edits[reviewIdx][f].newVal:(row[f]||'');t+=`${f}:\n${v}\n\n`;});
+  navigator.clipboard.writeText(t.trim()).then(()=>toast('Copiado al portapapeles','ok'));
+}
+function copyAllFull(){
+  const fields=formsHdrs.filter(h=>h!=='Incluido en Plantilla Maestra');const row=currentRowData;
+  let t=`CÓDIGO: ${document.getElementById('full-code').value}\n\n`;
+  fields.forEach(f=>{const v=edits[reviewIdx]&&edits[reviewIdx][f]?edits[reviewIdx][f].newVal:(row[f]||'');t+=`${f}:\n${v}\n\n`;});
+  navigator.clipboard.writeText(t.trim()).then(()=>toast('Copiado','ok'));
+}
+
+// ══ SHEETS OPERATIONS ═══════════════════════════════════════
+async function saveEdits(row,edits_){
+  const sid=xSid(cfg.responsesUrl),sn=cfg.responsesSheet||'Creacion_Codigo';
+  for(const[fn,{newVal,orig}] of Object.entries(edits_)){
+    const ci=formsHdrs.indexOf(fn);if(ci<0)continue;
+    const cl=col2l(ci+1);
+    await sUpdate(sid,`${sn}!${cl}${row.__row}`,[['Corregido: '+newVal+'. Original: '+orig]]);
+  }
+}
+
+async function writeToMaestra(row,code){
+  const sid=xSid(cfg.maestraUrl),sn=cfg.maestraSheet||'1.Cursos';
+  const mapping=cfg.mapping||DEFAULT_MAPPING;
+  const newRow=new Array(maestraHdrs.length).fill('');
+
+  const set=(col,val)=>{const i=maestraHdrs.findIndex(h=>h===col);if(i>=0)newRow[i]=val;};
+  set('Escuela',row['¿A cuál escuela pertenece?']||'');
+  set('Código',code);
+  set('Última Modificación',new Date().toISOString().split('T')[0]);
+  set('Estado del curso','EN PRODUCCIÓN');
+  set('Versión','Sin programa');
+
+  mapping.forEach(({forms,maestra})=>{
+    const mi=maestraHdrs.findIndex(h=>h===maestra);if(mi<0)return;
+    const edited=edits[reviewIdx]&&edits[reviewIdx][forms];
+    const val=edited?edited.newVal:(row[forms]||'');
+    if(val)newRow[mi]=val;
+  });
+
+  // Estrategia sin insertDimension:
+  // 1. Leer todas las filas de la hoja
+  // 2. Insertar la nueva fila en la posición correcta en memoria
+  // 3. Reescribir solo el bloque afectado (desde la posición de inserción)
+  const escuela=row['¿A cuál escuela pertenece?']||'';
+  await insertRowInPlace(sid,sn,newRow,escuela,code);
+}
+
+async function insertRowInPlace(sid,sn,newRow,escuela,newCode){
+  // Paso 1: leer A:B para encontrar posición (rápido)
+  const ab=await sGet(sid,sn+'!A:B');
+  const abRows=ab.values||[];
+
+  // Fila 0 = encabezado. Las filas de datos empiezan en índice 1.
+  // Trabajamos con números de fila en Sheets (1-based) directamente.
+  // Fila Sheets = índice en abRows + 1 (porque el array es 0-based).
+
+  // Caso: hoja vacía o solo encabezado
+  if(abRows.length<=1){
+    await sAppend(sid,sn,[newRow]);
+    return;
+  }
+
+  // Encontrar la fila Sheets donde insertar
+  // Queremos insertar DESPUÉS de la última fila de la escuela con código menor
+  // "Insertar en fila X" = la nueva fila quedará en la posición X,
+  // y todo lo que estaba en X y abajo se desplaza una fila hacia abajo.
+
+  let insertSheetRow = abRows.length + 1; // default: al final (después de todos)
+  let foundSchool = false;
+
+  for(let i=1; i<abRows.length; i++){  // i=1 para saltar encabezado
+    const rowEscuela = (abRows[i][0]||'').trim();
+    const rowCode    = (abRows[i][1]||'').trim();
+
+    if(rowEscuela === escuela){
+      foundSchool = true;
+      if(codeN(rowCode) > codeN(newCode)){
+        // Insertar ANTES de esta fila
+        insertSheetRow = i + 1; // fila Sheets es índice+1
+        break;
+      }
+      // Si el código es menor o igual, seguir avanzando
+      insertSheetRow = i + 2; // insertar después de esta fila
+    } else if(foundSchool){
+      // Salimos del bloque de la escuela sin encontrar código mayor
+      // insertSheetRow ya quedó apuntando a la fila después del último de la escuela
+      break;
+    }
+  }
+
+  if(!foundSchool){
+    // Escuela no está en la plantilla aún — append al final
+    await sAppend(sid,sn,[newRow]);
+    return;
+  }
+
+  // Paso 2: obtener sheetId
+  const metaR=await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${sid}?fields=sheets.properties`,
+    {headers:{Authorization:'Bearer '+token}}
+  );
+  const mj=await metaR.json();
+  const sh=(mj.sheets||[]).find(s=>s.properties.title===sn);
+  if(!sh) throw new Error('Hoja no encontrada: '+sn);
+  const sheetId=sh.properties.sheetId;
+
+  // Paso 3: insertDimension
+  // startIndex es 0-based. La fila Sheets insertSheetRow (1-based) corresponde a startIndex = insertSheetRow - 1.
+  const startIndex = insertSheetRow - 1;
+  const ir=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}:batchUpdate`,{
+    method:'POST',
+    headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+    body:JSON.stringify({requests:[{insertDimension:{
+      range:{sheetId,dimension:'ROWS',startIndex,endIndex:startIndex+1},
+      inheritFromBefore:false
+    }}]})
+  });
+  if(!ir.ok) throw new Error('insertDimension '+ir.status+': '+await ir.text());
+
+  // Paso 4: escribir la fila en insertSheetRow (que ahora está vacía)
+  const colEnd=col2l(newRow.length);
+  await sUpdate(sid,`${sn}!A${insertSheetRow}:${colEnd}${insertSheetRow}`,[newRow]);
+}
+
+async function sAppend(sid,sn,rows){
+  const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(sn+'!A1')}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,{
+    method:'POST',
+    headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+    body:JSON.stringify({majorDimension:'ROWS',values:rows})
+  });
+  if(!r.ok)throw new Error('Append '+r.status+': '+await r.text());
+  return r.json();
+}
+
+async function markDone(rowIdx){
+  await sUpdate(xSid(cfg.responsesUrl),`${cfg.responsesSheet||'Creacion_Codigo'}!A${rowIdx}`,[['TRUE']]);
+}
+
+async function sendMail(emails,code,name,school){
+  const recipients=Array.isArray(emails)?emails:[emails];
+  const subj=`[DCD] Curso añadido a Plantilla Maestra: ${code}`;
+  const body=`Estimado equipo de ${school},\n\nSe ha aprobado e incorporado el siguiente curso:\n\n  Código: ${code}\n  Nombre: ${name}\n  Fecha: ${new Date().toLocaleDateString('es-CR')}\n\nSaludos,\nDirección de Desarrollo Curricular y Docente\nUniversidad CENFOTEC`;
+
+  // Asunto con encoding RFC 2047 para soportar tildes y ñ
+  const subjB64=btoa(unescape(encodeURIComponent(subj)));
+  const subjEncoded=`=?UTF-8?B?${subjB64}?=`;
+
+  // Cuerpo en base64 para garantizar UTF-8 completo
+  const bodyB64=btoa(unescape(encodeURIComponent(body)));
+
+  for(const to of recipients){
+    const msg=[
+      `To: ${to}`,
+      `Subject: ${subjEncoded}`,
+      `MIME-Version: 1.0`,
+      `Content-Type: text/plain; charset=UTF-8`,
+      `Content-Transfer-Encoding: base64`,
+      ``,
+      bodyB64
+    ].join('\r\n');
+    const enc=btoa(unescape(encodeURIComponent(msg))).replace(/\+/g,'-').replace(/\//g,'_');
+    await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{
+      method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+      body:JSON.stringify({raw:enc})
+    });
+  }
+}
+
+// ══ SHEETS API ══════════════════════════════════════════════
+async function sGet(sid,range){
+  const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(range)}`,
+    {headers:{Authorization:'Bearer '+token}});
+  if(!r.ok)throw new Error('Sheets GET '+r.status+': '+await r.text());
+  return r.json();
+}
+async function sUpdate(sid,range,vals){
+  const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,{
+    method:'PUT',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+    body:JSON.stringify({range,majorDimension:'ROWS',values:vals})
+  });
+  if(!r.ok)throw new Error('Sheets UPDATE '+r.status+': '+await r.text());
+  return r.json();
+}
+
+// ══ CONFIG MODAL ════════════════════════════════════════════
+function openCfg(){
+  document.getElementById('cfg-cid').value=cfg.clientId||'';
+  document.getElementById('cfg-rurl').value=cfg.responsesUrl||'';
+  document.getElementById('cfg-rsheet').value=cfg.responsesSheet||'Creacion_Codigo';
+  document.getElementById('cfg-murl').value=cfg.maestraUrl||'';
+  document.getElementById('cfg-msheet').value=cfg.maestraSheet||'1.Cursos';
+  renderEmails();renderMapping();
+  document.getElementById('cfg-overlay').classList.add('open');
+}
+function closeCfg(){document.getElementById('cfg-overlay').classList.remove('open');}
+
+function renderEmails(){
+  const c=document.getElementById('em-container');c.innerHTML='';
+  SCHOOLS.forEach(s=>{
+    // cfg.schoolEmails[school] puede ser string (legacy) o array
+    let emails=cfg.schoolEmails&&cfg.schoolEmails[s.name];
+    if(!emails)emails=[];
+    else if(typeof emails==='string')emails=emails?[emails]:[];
+    if(emails.length===0)emails=[''];
+
+    const block=document.createElement('div');block.className='em-block';block.dataset.prefix=s.prefix;
+    block.innerHTML=`
+      <div class="em-block-head">
+        <span class="em-lbl">${s.prefix} <span style="font-weight:400;color:var(--muted);font-size:11px;">· ${s.name}</span></span>
+        <button class="em-add" onclick="addEmailRow('${s.prefix}')">+ Agregar correo</button>
+      </div>
+      <div class="em-rows" id="emrows-${s.prefix}"></div>
+    `;
+    c.appendChild(block);
+
+    const rowsEl=document.getElementById('emrows-'+s.prefix);
+    emails.forEach((em,i)=>addEmailRowEl(rowsEl,s.prefix,em,i));
+  });
+}
+
+function addEmailRow(prefix){
+  const rowsEl=document.getElementById('emrows-'+prefix);
+  addEmailRowEl(rowsEl,prefix,'',rowsEl.children.length);
+}
+
+function addEmailRowEl(container,prefix,value,idx){
+  const row=document.createElement('div');row.className='em-email-row';
+  row.innerHTML=`
+    <input type="email" placeholder="correo@ucenfotec.ac.cr" value="${value}">
+    <button class="em-remove" title="Eliminar" onclick="this.parentElement.remove()">×</button>
+  `;
+  container.appendChild(row);
+}
+
+function renderMapping(){
+  const c=document.getElementById('map-container');c.innerHTML='';
+  const mapping=cfg.mapping||DEFAULT_MAPPING;
+  mapping.forEach((m,i)=>{
+    const r=document.createElement('div');r.className='map-row';
+    const fOpts=formsHdrs.length>0?formsHdrs:DEFAULT_MAPPING.map(x=>x.forms);
+    const mOpts=maestraHdrs.length>0?maestraHdrs:DEFAULT_MAPPING.map(x=>x.maestra);
+    r.innerHTML=`
+      <select id="mf-${i}">${fOpts.map(h=>`<option value="${h}" ${h===m.forms?'selected':''}>${h}</option>`).join('')}</select>
+      <div class="map-arrow">→</div>
+      <select id="mm-${i}">${mOpts.map(h=>`<option value="${h}" ${h===m.maestra?'selected':''}>${h.replace(/\n/g,' ')}</option>`).join('')}</select>
+    `;
+    c.appendChild(r);
+  });
+}
+
+function saveCfg(){
+  cfg.clientId=document.getElementById('cfg-cid').value.trim();
+  cfg.responsesUrl=document.getElementById('cfg-rurl').value.trim();
+  cfg.responsesSheet=document.getElementById('cfg-rsheet').value.trim();
+  cfg.maestraUrl=document.getElementById('cfg-murl').value.trim();
+  cfg.maestraSheet=document.getElementById('cfg-msheet').value.trim();
+  cfg.schoolEmails={};
+  SCHOOLS.forEach(s=>{
+    const rowsEl=document.getElementById('emrows-'+s.prefix);
+    if(!rowsEl)return;
+    const emails=[...rowsEl.querySelectorAll('input')].map(i=>i.value.trim()).filter(Boolean);
+    if(emails.length)cfg.schoolEmails[s.name]=emails;
+  });
+  const mapping=cfg.mapping||DEFAULT_MAPPING;
+  cfg.mapping=mapping.map((_,i)=>({forms:document.getElementById('mf-'+i)?.value||'',maestra:document.getElementById('mm-'+i)?.value||''})).filter(m=>m.forms&&m.maestra);
+  saveCfgToStorage();closeCfg();toast('Configuración guardada','ok');
+  if(cfg.clientId&&cfg.responsesUrl&&cfg.maestraUrl){showS('s-load');initApp();}
+}
+
+async function doAuth(){
+  const cid=document.getElementById('cfg-cid').value.trim();
+  if(!cid){toast('Ingresá el Client ID','warn');return;}
+  cfg.clientId=cid;
+  try{await auth();document.getElementById('auth-ok').innerHTML='<span style="color:var(--green)">✓ Autenticado</span>';}
+  catch(e){document.getElementById('auth-ok').innerHTML='<span style="color:var(--red)">✗ '+e.message+'</span>';}
+}
+
+async function validateSheets(){
+  const el=document.getElementById('sheets-ok');el.textContent='Validando...';
+  try{
+    const rid=xSid(document.getElementById('cfg-rurl').value.trim());
+    const rsn=document.getElementById('cfg-rsheet').value.trim();
+    const rd=await sGet(rid,rsn+'!1:1');
+    formsHdrs=(rd.values||[[]])[0]||[];
+
+    const mid=xSid(document.getElementById('cfg-murl').value.trim());
+    const msn=document.getElementById('cfg-msheet').value.trim();
+    const md=await sGet(mid,msn+'!1:1');
+    maestraHdrs=(md.values||[[]])[0]||[];
+
+    el.innerHTML=`<span style="color:var(--green)">✓ Forms: ${formsHdrs.length} cols · Maestra: ${maestraHdrs.length} cols</span>`;
+    renderMapping();
+  }catch(e){el.innerHTML=`<span style="color:var(--red)">✗ ${e.message}</span>`;}
+}
+
+// ══ HELPERS ═════════════════════════════════════════════════
+function showS(id){
+  ['s-setup','s-load','s-empty','s-board','s-review'].forEach(s=>{
+    const el=document.getElementById(s);if(el){el.style.display='none';el.classList.add('hidden');}
+  });
+  const t=document.getElementById(id);
+  if(t){t.style.display='';t.classList.remove('hidden');}
+}
+function setLoad(m){const el=document.getElementById('load-msg');if(el)el.textContent=m;}
+function toast(msg,type){
+  const t=document.getElementById('toast');t.textContent=msg;
+  t.className='toast '+(type||'');t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+function xSid(url){const m=url.match(/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);return m?m[1]:url;}
+function col2l(n){let s='';while(n>0){const r=(n-1)%26;s=String.fromCharCode(65+r)+s;n=Math.floor((n-1)/26);}return s;}
+function codeN(c){const n=parseInt((c||'').split('-')[1]||'0',10);return isNaN(n)?0:n;}
+</script>
+</body>
+</html>
