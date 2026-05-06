@@ -1480,9 +1480,7 @@ async function pushToMaestro(){
 
     // Descripción: assemble all 4 sub-parts into one cell if present
     const descParts=[saved.descripcion_objeto,saved.descripcion_import,saved.descripcion_en_curso,saved.descripcion_rasgos].filter(Boolean);
-    if(descParts.length) colMap['Descripción']=descParts.join('
-
-');
+    if(descParts.length) colMap['Descripción']=descParts.join('\n\n');
 
     // Cronograma → individual session columns
     if(saved.cronograma){
