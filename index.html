@@ -10,7 +10,7 @@
 <!-- Google Identity Services -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <!-- Lucide icons -->
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 <style>
 :root {
   /* Institutional palette */
@@ -366,7 +366,7 @@ body::after{display:none;} /* kill noise overlay */
 <div id="screen-home" class="screen active">
   <nav class="home-nav">
     <div class="brand">
-      <img src="assets/logo-horizontal-color.png" alt="CENFOTEC" class="brand-logo">
+      <img src="logo-horizontal-color.png" alt="CENFOTEC" class="brand-logo">
       <div style="height:24px;width:1px;background:var(--border);"></div>
       <div style="font-family:var(--sans);font-size:13px;font-weight:600;color:var(--ink-2);letter-spacing:-0.005em;">Asistente Curricular <span style="color:var(--ink-4);font-weight:500;">· DCD</span></div>
     </div>
@@ -378,7 +378,7 @@ body::after{display:none;} /* kill noise overlay */
 
   <div class="home-main">
     <div class="home-sidebar">
-      <div class="cfc-eyebrow">DCD · Departamento de Calidad de Diseño</div>
+      <div class="cfc-eyebrow">DCD · Departamento de Desarrollo Curricular y Docente</div>
       <h1>Diseño de programas <em>de curso</em></h1>
       <p>Gestiona cada sección del Maestro con prompts listos y escribe directamente en tu Google Sheet.</p>
       <div class="home-features">
@@ -1552,6 +1552,7 @@ function renderProjects(){
   add.innerHTML='<div class="plus">+</div><span>Agregar proyecto</span>';
   add.onclick=()=>document.getElementById('modal-add').classList.add('active');
   grid.appendChild(add);
+  if(window.__renderIcons) window.__renderIcons();
 }
 function createProject(){
   const name   = document.getElementById('in-name').value.trim();
@@ -1645,6 +1646,7 @@ function renderTable(courses){
     tr.onclick=()=>showCourseWork(c);
     tbody.appendChild(tr);
   });
+  if(window.__renderIcons) window.__renderIcons();
   table.appendChild(tbody);wrap.appendChild(table);
   cont.innerHTML='';cont.appendChild(wrap);
 }
@@ -1679,6 +1681,7 @@ function renderSecGrid(){
     });
     grid.appendChild(div);
   });
+  if(window.__renderIcons) window.__renderIcons();
 }
 
 function openSection(sec,pillEl){
@@ -2660,6 +2663,7 @@ function openPromptEditor() {
     div.onclick = () => selectPromptKey(pm, div);
     list.appendChild(div);
   });
+  if(window.__renderIcons) window.__renderIcons();
   document.getElementById('modal-prompts').classList.add('active');
 }
 
@@ -2725,22 +2729,25 @@ function resetCurrentPrompt() {
 }
 
 
-/* ── Lucide auto-render hook ── */
+/* ── Lucide render hook (safe, no infinite loop) ── */
 (function(){
-  function tick(){ if (window.lucide) lucide.createIcons(); }
-  tick();
-  // Run after every DOM change inside dynamic regions
-  const targets = ['projects-grid','courses-container','sec-grid','sch-rows','ficha-fields','pe-list','rel-chips','ci-meta','nav-auth'];
-  const obs = new MutationObserver(tick);
-  function attach(){
-    targets.forEach(id=>{ const el=document.getElementById(id); if(el) obs.observe(el,{childList:true,subtree:true}); });
-    document.body && obs.observe(document.body,{childList:true,subtree:false});
+  let pending = false;
+  function renderIcons(){
+    if (pending || !window.lucide) return;
+    pending = true;
+    requestAnimationFrame(()=>{
+      pending = false;
+      try { lucide.createIcons(); } catch(e) {}
+    });
   }
-  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',attach);
-  else attach();
-  // Also run on visibility/screen change
+  // Initial render
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',renderIcons);
+  else renderIcons();
+  // Re-render after screen changes (covers all dynamic content paths)
   const _showScreen = window.showScreen;
-  if (_showScreen) window.showScreen = function(id){ _showScreen(id); setTimeout(tick,50); };
+  if (_showScreen) window.showScreen = function(id){ _showScreen(id); setTimeout(renderIcons,30); };
+  // Expose for explicit calls
+  window.__renderIcons = renderIcons;
 })();
 
 </script>
